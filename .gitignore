@@ -1,4 +1,5 @@
 **/target/
+*.ffs_db
 
 **/.DS_Store
 README.html
