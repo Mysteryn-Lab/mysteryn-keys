@@ -2,6 +2,8 @@
 edition = "2024"
 rust-version = "1.85"
 authors = ["Dmytro Savranskyi <ingvuil@gmail.com>"]
+homepage = "https://mysteryn.com"
+repository = "https://github.com/Mysteryn-Lab/mysteryn-keys"
 license = "MIT"
 
 [workspace]

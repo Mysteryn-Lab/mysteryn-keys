@@ -1350,6 +1350,7 @@ dependencies = [
 [[package]]
 name = "mysteryn-core"
 version = "0.1.0"
+source = "git+https://github.com/Mysteryn-Lab/mysteryn-crypto.git#6f5c908d9022eda96b09ad8f1a44397c6c1e090d"
 dependencies = [
  "ambassador",
  "base32ct",
