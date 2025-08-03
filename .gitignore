@@ -1,0 +1,12 @@
+**/target/
+
+**/.DS_Store
+README.html
+
+.vscode
+
+dist
+pkg
+
+*.pending-snap
+*.new

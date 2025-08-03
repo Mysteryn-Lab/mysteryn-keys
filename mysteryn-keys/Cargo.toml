@@ -1,0 +1,117 @@
+[package]
+name = "mysteryn-keys"
+description = "The Mysteryn keys collection"
+version = "0.1.0"
+edition = { workspace = true }
+rust-version = { workspace = true }
+keywords = ["crypto", "signature", "authorization"]
+categories = ["cryptography", "algorithms", "encoding"]
+authors = ["Dmytro Savranskyi <ingvuil@gmail.com>"]
+homepage = "https://mysteryn.com"
+license = "MIT"
+readme = "README.md"
+
+# Starting from Rust 1.87 all wasm features are on, so need to specify 
+# wasm-opt features explicitly.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz", "--enable-mutable-globals", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
+
+[features]
+default = ["ed25519", "secp256k1", "p521", "falcon", "hmac"]
+
+ed25519 = ["dep:ed25519-zebra"]
+secp256k1 = ["dep:libsecp256k1"]
+p521 = ["dep:p521"]
+falcon = ["dep:falcon-rust"]
+hmac = ["dep:hmac"]
+
+ed448 = ["dep:ed448-rust"]
+bls12381 = ["dep:bls12_381-bls", "dep:dusk-bytes"]
+x25519 = ["dep:ed25519-zebra", "x25519-dalek"]
+p256 = ["dep:p256"]
+p384 = ["dep:p384"]
+rsa = ["dep:rsa"]
+faest = ["dep:faest"]
+mldsa = ["dep:fips204"]
+mlkem = ["dep:ml-kem"]
+slhdsa = ["dep:slh-dsa"]
+
+[dependencies]
+base64 = "0.22"
+bs58 = "0.5"
+cid = { version = "0.11", features = ["serde"] }
+futures = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+multihash-codetable = { version = "0.1", features = ["sha2", "blake3"] }
+unsigned-varint = "0.8"
+sha2 = { version = "0.10", features = ["oid"] }
+thiserror = "2.0"
+multicodec = "0.1"
+ambassador = "0.4"
+reed_solomon_rs = "0.1"
+reed-solomon = "0.2"
+data-encoding = "2.9"
+data-encoding-macro = "0.1"
+base32ct = { version = "0.2", features = ["alloc"] }
+hex = "0.4"
+urlencoding = "2.1"
+phf = { version = "0.12", features = ["macros"] }
+multihash-derive = "0.9"
+bytes = "1.10"
+mysteryn-core = { version = "0.1", git = "https://github.com/Mysteryn-Lab/mysteryn-crypto.git" }
+
+rand = { version = "0.9" }
+rand08 = { package = "rand", version = "0.8" } # many dependencies are still sitting on rand v0.8
+
+ed25519-zebra = { version = "4.0", optional = true }
+ed448-rust = { version = "0.1", git = "https://github.com/pdh11/ed448-rust.git", optional = true }
+falcon-rust = { version = "0.1", optional = true }
+x25519-dalek = { version = "2.0", features = [
+  "static_secrets",
+], optional = true }
+bls12_381-bls = { version = "0.5", optional = true }
+dusk-bytes = { version = "0.1", optional = true }
+p256 = { version = "0.13", optional = true }
+p384 = { version = "0.13", optional = true }
+p521 = { version = "0.13", optional = true }
+rsa = { version = "0.9", features = ["serde"], optional = true }
+libsecp256k1 = { version = "0.7", optional = true }
+faest = { version = "0.2", optional = true }
+fips204 = { version = "0.4", optional = true }
+ml-kem = { version = "0.3.0-pre", git = "https://github.com/druide/KEMs.git", features = [
+  "deterministic",
+], optional = true }
+slh-dsa = { version = "0.2.0-pre", git = "https://github.com/druide/signatures.git", optional = true }
+hmac = { version = "0.12.1", optional = true }
+
+[target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dependencies]
+# This is needed so that rand can be included in wasm32-unknown-unknown builds.
+getrandom = { version = "0.3", features = ["wasm_js"] }
+getrandom08 = { package = "getrandom", version = "0.2", features = ["js"] } # many dependencies are still sitting on rand v0.8
+
+[target.'cfg(all(target_family = "wasm"))'.dependencies]
+wasm-bindgen = "0.2"
+serde-wasm-bindgen = "0.6"
+
+[dev-dependencies]
+serde_ipld_dagcbor = "0.6"
+serde_json = "1.0"
+divan = "0.1"
+
+[target.'cfg(not(all(target_family = "wasm", target_os = "unknown")))'.dev-dependencies]
+tokio = { version = "^1", features = ["macros", "test-util"] }
+
+[target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[lib]
+doctest = false
+#crate-type = ["cdylib", "rlib"]
+
+[[bench]]
+name = "signing"
+harness = false
+
+[[bench]]
+name = "verification"
+harness = false

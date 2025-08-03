@@ -1,0 +1,18 @@
+[workspace.package]
+edition = "2024"
+rust-version = "1.85"
+authors = ["Dmytro Savranskyi <ingvuil@gmail.com>"]
+license = "MIT"
+
+[workspace]
+members = ["mysteryn-keys"]
+resolver = "2"
+
+[workspace.dependencies]
+
+#dev-dependencies
+
+# Some modules use computation-heavy algorithms which performs bad in debug
+# build, so need to optimize debug additionally.
+[profile.dev.package."*"]
+opt-level = 2
