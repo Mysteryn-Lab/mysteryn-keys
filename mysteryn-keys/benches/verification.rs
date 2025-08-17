@@ -12,6 +12,8 @@ mod bench_verification {
         falcon1024::Falcon1024SecretKey,
         hmac_sha256::HmacSha256SecretKey,
         mldsa44::MlDsa44SecretKey,
+        mldsa65::MlDsa65SecretKey,
+        mldsa87::MlDsa87SecretKey,
         mlkem512::MlKem512SecretKey,
         p256::P256SecretKey,
         p384::P384SecretKey,
@@ -31,6 +33,7 @@ mod bench_verification {
     fn Bls12381G1(bencher: Bencher) {
         let key = Bls12381G1SecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -38,6 +41,7 @@ mod bench_verification {
     fn Ed448(bencher: Bencher) {
         let key = Ed448SecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -45,6 +49,7 @@ mod bench_verification {
     fn Ed25519(bencher: Bencher) {
         let key = Ed25519SecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -52,6 +57,7 @@ mod bench_verification {
     fn Faest128f(bencher: Bencher) {
         let key = Faest128fSecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -59,6 +65,7 @@ mod bench_verification {
     fn Falcon512(bencher: Bencher) {
         let key = Falcon512SecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -66,6 +73,7 @@ mod bench_verification {
     fn Falcon1024(bencher: Bencher) {
         let key = Falcon1024SecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -80,6 +88,23 @@ mod bench_verification {
     fn MlDsa44(bencher: Bencher) {
         let key = MlDsa44SecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
+        bencher.bench(|| black_box(key.verify(DATA, &sig)))
+    }
+
+    #[bench]
+    fn MlDsa65(bencher: Bencher) {
+        let key = MlDsa65SecretKey::new();
+        let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
+        bencher.bench(|| black_box(key.verify(DATA, &sig)))
+    }
+
+    #[bench]
+    fn MlDsa87(bencher: Bencher) {
+        let key = MlDsa87SecretKey::new();
+        let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -97,6 +122,7 @@ mod bench_verification {
     fn P256(bencher: Bencher) {
         let key = P256SecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -104,6 +130,7 @@ mod bench_verification {
     fn P384(bencher: Bencher) {
         let key = P384SecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -111,6 +138,7 @@ mod bench_verification {
     fn P521(bencher: Bencher) {
         let key = P521SecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -118,6 +146,7 @@ mod bench_verification {
     fn Rs256(bencher: Bencher) {
         let key = Rs256SecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -125,6 +154,7 @@ mod bench_verification {
     fn Rs512(bencher: Bencher) {
         let key = Rs512SecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -132,6 +162,7 @@ mod bench_verification {
     fn Secp256k1(bencher: Bencher) {
         let key = Secp256k1SecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 
@@ -139,6 +170,7 @@ mod bench_verification {
     fn SlhDsaShake128f(bencher: Bencher) {
         let key = SlhDsaShake128fSecretKey::new();
         let sig = key.sign(DATA, None).unwrap();
+        let key = key.public_key();
         bencher.bench(|| black_box(key.verify(DATA, &sig)))
     }
 

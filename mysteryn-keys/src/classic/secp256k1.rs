@@ -1,5 +1,6 @@
-use libsecp256k1::{
-    Message, PublicKey as VerifyingKey, PublicKeyFormat, SecretKey as SigningKey, Signature,
+use k256::ecdsa::{
+    Signature, SigningKey, VerifyingKey,
+    signature::{Signer, Verifier},
 };
 use mysteryn_core::{
     RawSignature,
@@ -11,7 +12,6 @@ use mysteryn_core::{
 };
 use rand08::{CryptoRng, RngCore, thread_rng as rng};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
 use std::{any::Any, fmt::Display, str::FromStr};
 
 #[derive(Clone)]
@@ -52,11 +52,11 @@ impl SecretKeyTrait for Secp256k1SecretKey {
     }
 
     fn public_key(&self) -> Box<dyn PublicKeyTrait> {
-        Box::new(Secp256k1PublicKey(VerifyingKey::from_secret_key(&self.0)))
+        Box::new(Secp256k1PublicKey(VerifyingKey::from(&self.0)))
     }
 
     fn to_bytes(&self) -> Vec<u8> {
-        self.0.serialize().to_vec()
+        self.0.to_bytes().to_vec()
     }
 
     fn get_shared_secret(&self, _: Option<Vec<u8>>) -> Option<Vec<u8>> {
@@ -77,9 +77,8 @@ impl SecretKeyTrait for Secp256k1SecretKey {
         _: Option<Vec<u8>>,
         _: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
-        let message = Message::parse(&get_hash(data));
-        let signature = libsecp256k1::sign(&message, &self.0).0;
-        Ok(RawSignature::from(signature.serialize().as_slice()))
+        let signature: Signature = self.0.sign(data);
+        Ok(RawSignature::from(signature.to_bytes().as_slice()))
     }
 
     fn sign_deterministic(
@@ -92,21 +91,13 @@ impl SecretKeyTrait for Secp256k1SecretKey {
     }
 
     fn verify(&self, data: &[u8], signature: &RawSignature) -> Result<()> {
-        let message = Message::parse(&get_hash(data));
-        let signature = Signature::parse_standard_slice(signature.as_bytes())
+        let signature = Signature::from_slice(signature.as_bytes())
             .map_err(|e| Error::InvalidSignature(e.to_string()))?;
 
-        if libsecp256k1::verify(
-            &message,
-            &signature,
-            &VerifyingKey::from_secret_key(&self.0),
-        ) {
-            Ok(())
-        } else {
-            Err(Error::InvalidSignature(
-                "could not verify signature".to_owned(),
-            ))
-        }
+        self.0
+            .verifying_key()
+            .verify(data, &signature)
+            .map_err(|e| Error::InvalidSignature(e.to_string()))
     }
 
     fn signature(&self, signature: &RawSignature) -> Result<Box<dyn SignatureTrait>> {
@@ -139,7 +130,7 @@ impl TryFrom<&[u8]> for Secp256k1SecretKey {
     type Error = Error;
     fn try_from(bytes: &[u8]) -> Result<Self> {
         let private_key =
-            SigningKey::parse_slice(bytes).map_err(|e| Error::InvalidKey(e.to_string()))?;
+            SigningKey::from_slice(bytes).map_err(|e| Error::InvalidKey(e.to_string()))?;
         Ok(Self(private_key))
     }
 }
@@ -158,7 +149,7 @@ impl TryFrom<&KeyAttributes> for Secp256k1SecretKey {
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
             let secret_key =
-                SigningKey::parse_slice(key_data).map_err(|e| Error::InvalidKey(e.to_string()))?;
+                SigningKey::from_slice(key_data).map_err(|e| Error::InvalidKey(e.to_string()))?;
             Ok(Self(secret_key))
         } else {
             Err(Error::InvalidKey("invalid attributes".to_owned()))
@@ -235,7 +226,7 @@ impl PublicKeyTrait for Secp256k1PublicKey {
     }
 
     fn to_bytes(&self) -> Vec<u8> {
-        self.0.serialize_compressed().to_vec()
+        self.0.to_sec1_bytes().to_vec()
     }
 
     fn get_ciphertext(&self, _nonce: Option<&[u8]>) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -247,17 +238,12 @@ impl PublicKeyTrait for Secp256k1PublicKey {
     }
 
     fn verify(&self, data: &[u8], signature: &RawSignature) -> Result<()> {
-        let message = Message::parse(&get_hash(data));
-        let signature = Signature::parse_standard_slice(signature.as_bytes())
+        let signature = Signature::from_slice(signature.as_bytes())
             .map_err(|e| Error::InvalidSignature(e.to_string()))?;
 
-        if libsecp256k1::verify(&message, &signature, &self.0) {
-            Ok(())
-        } else {
-            Err(Error::InvalidSignature(
-                "could not verify signature".to_owned(),
-            ))
-        }
+        self.0
+            .verify(data, &signature)
+            .map_err(|e| Error::InvalidSignature(e.to_string()))
     }
 
     fn signature(&self, signature: &RawSignature) -> Result<Box<dyn SignatureTrait>> {
@@ -289,8 +275,8 @@ impl std::fmt::Debug for Secp256k1PublicKey {
 impl TryFrom<&[u8]> for Secp256k1PublicKey {
     type Error = Error;
     fn try_from(bytes: &[u8]) -> Result<Self> {
-        let public_key = VerifyingKey::parse_slice(bytes, Some(PublicKeyFormat::Compressed))
-            .map_err(|e| Error::InvalidKey(e.to_string()))?;
+        let public_key =
+            VerifyingKey::from_sec1_bytes(bytes).map_err(|e| Error::InvalidKey(e.to_string()))?;
         Ok(Self(public_key))
     }
 }
@@ -308,20 +294,13 @@ impl TryFrom<&KeyAttributes> for Secp256k1PublicKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            let public_key = VerifyingKey::parse_slice(key_data, Some(PublicKeyFormat::Compressed))
+            let public_key = VerifyingKey::from_sec1_bytes(key_data)
                 .map_err(|e| Error::InvalidKey(e.to_string()))?;
             Ok(Self(public_key))
         } else {
             Err(Error::InvalidKey("invalid attributes".to_owned()))
         }
     }
-}
-
-fn get_hash(data: &[u8]) -> [u8; 32] {
-    let hash = Sha256::digest(data);
-    let mut output = [0u8; 32];
-    output.copy_from_slice(&hash[..32]);
-    output
 }
 
 impl PartialOrd for Secp256k1PublicKey {

@@ -20,6 +20,12 @@ use super::falcon512::{Falcon512PublicKey, Falcon512SecretKey, Falcon512Signatur
 use super::falcon1024::{Falcon1024PublicKey, Falcon1024SecretKey, Falcon1024Signature};
 #[cfg(feature = "hmac")]
 use super::hmac_sha256::{HmacSha256PublicKey, HmacSha256SecretKey, HmacSha256Signature};
+#[cfg(feature = "mldsa")]
+use super::mldsa44::{MlDsa44PublicKey, MlDsa44SecretKey, MlDsa44Signature};
+#[cfg(feature = "mldsa")]
+use super::mldsa65::{MlDsa65PublicKey, MlDsa65SecretKey, MlDsa65Signature};
+#[cfg(all(feature = "mldsa", not(target_family = "wasm")))]
+use super::mldsa87::{MlDsa87PublicKey, MlDsa87SecretKey, MlDsa87Signature};
 #[cfg(feature = "mlkem")]
 use super::mlkem512::{MlKem512PublicKey, MlKem512SecretKey, MlKem512Signature};
 #[cfg(feature = "p256")]
@@ -103,6 +109,12 @@ impl KeyFactory for DefaultKeyFactory {
                     known_algorithm_name::Falcon512 => Ok(Box::new(Falcon512SecretKey::new())),
                     #[cfg(feature = "falcon")]
                     known_algorithm_name::Falcon1024 => Ok(Box::new(Falcon1024SecretKey::new())),
+                    #[cfg(feature = "mldsa")]
+                    known_algorithm_name::MLDSA44 => Ok(Box::new(MlDsa44SecretKey::new())),
+                    #[cfg(feature = "mldsa")]
+                    known_algorithm_name::MLDSA65 => Ok(Box::new(MlDsa65SecretKey::new())),
+                    #[cfg(all(feature = "mldsa", not(target_family = "wasm")))]
+                    known_algorithm_name::MLDSA87 => Ok(Box::new(MlDsa87SecretKey::new())),
                     _ => Err(Error::EncodingError(format!(
                         "unsupported custom algorithm {custom_key_algorithm}"
                     ))),
@@ -186,6 +198,18 @@ impl KeyFactory for DefaultKeyFactory {
                     known_algorithm_name::Falcon1024 => {
                         Ok(Box::new(Falcon1024SecretKey::try_from(bytes)?))
                     }
+                    #[cfg(feature = "mldsa")]
+                    known_algorithm_name::MLDSA44 => {
+                        Ok(Box::new(MlDsa44SecretKey::try_from(bytes)?))
+                    }
+                    #[cfg(feature = "mldsa")]
+                    known_algorithm_name::MLDSA65 => {
+                        Ok(Box::new(MlDsa65SecretKey::try_from(bytes)?))
+                    }
+                    #[cfg(all(feature = "mldsa", not(target_family = "wasm")))]
+                    known_algorithm_name::MLDSA87 => {
+                        Ok(Box::new(MlDsa87SecretKey::try_from(bytes)?))
+                    }
                     _ => Err(Error::EncodingError(format!(
                         "unsupported custom algorithm {custom_key_algorithm}"
                     ))),
@@ -265,6 +289,18 @@ impl KeyFactory for DefaultKeyFactory {
                     known_algorithm_name::Falcon1024 => {
                         Ok(Box::new(Falcon1024PublicKey::try_from(bytes)?))
                     }
+                    #[cfg(feature = "mldsa")]
+                    known_algorithm_name::MLDSA44 => {
+                        Ok(Box::new(MlDsa44PublicKey::try_from(bytes)?))
+                    }
+                    #[cfg(feature = "mldsa")]
+                    known_algorithm_name::MLDSA65 => {
+                        Ok(Box::new(MlDsa65PublicKey::try_from(bytes)?))
+                    }
+                    #[cfg(all(feature = "mldsa", not(target_family = "wasm")))]
+                    known_algorithm_name::MLDSA87 => {
+                        Ok(Box::new(MlDsa87PublicKey::try_from(bytes)?))
+                    }
                     _ => Err(Error::EncodingError(format!(
                         "unsupported custom algorithm {custom_key_algorithm}"
                     ))),
@@ -339,6 +375,18 @@ impl KeyFactory for DefaultKeyFactory {
                     #[cfg(feature = "falcon")]
                     known_algorithm_name::Falcon1024 => {
                         Ok(Box::new(Falcon1024Signature::try_from(bytes)?))
+                    }
+                    #[cfg(feature = "mldsa")]
+                    known_algorithm_name::MLDSA44 => {
+                        Ok(Box::new(MlDsa44Signature::try_from(bytes)?))
+                    }
+                    #[cfg(feature = "mldsa")]
+                    known_algorithm_name::MLDSA65 => {
+                        Ok(Box::new(MlDsa65Signature::try_from(bytes)?))
+                    }
+                    #[cfg(all(feature = "mldsa", not(target_family = "wasm")))]
+                    known_algorithm_name::MLDSA87 => {
+                        Ok(Box::new(MlDsa87Signature::try_from(bytes)?))
                     }
                     #[cfg(feature = "hmac")]
                     known_algorithm_name::HMAC_SHA256 => {
@@ -443,6 +491,30 @@ impl KeyFactory for DefaultKeyFactory {
                 codec: multicodec_prefix::MLKEM512,
                 key_exchange: true,
                 public_verify: false,
+            },
+            #[cfg(feature = "mldsa")]
+            SupportedAlgorithm {
+                algorithm_name: known_algorithm_name::MLDSA44.to_string(),
+                secret_codec: multicodec_prefix::CUSTOM,
+                codec: multicodec_prefix::CUSTOM,
+                key_exchange: false,
+                public_verify: true,
+            },
+            #[cfg(feature = "mldsa")]
+            SupportedAlgorithm {
+                algorithm_name: known_algorithm_name::MLDSA65.to_string(),
+                secret_codec: multicodec_prefix::CUSTOM,
+                codec: multicodec_prefix::CUSTOM,
+                key_exchange: false,
+                public_verify: true,
+            },
+            #[cfg(all(feature = "mldsa", not(target_family = "wasm")))]
+            SupportedAlgorithm {
+                algorithm_name: known_algorithm_name::MLDSA87.to_string(),
+                secret_codec: multicodec_prefix::CUSTOM,
+                codec: multicodec_prefix::CUSTOM,
+                key_exchange: false,
+                public_verify: true,
             },
             #[cfg(feature = "hmac")]
             SupportedAlgorithm {

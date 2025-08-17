@@ -1,8 +1,8 @@
 use fips204::traits::{SerDes, Signer, Verifier};
 use fips204::{
-    ml_dsa_44,
-    ml_dsa_44::{PrivateKey as SigningKey, PublicKey as VerifyingKey},
-}; // Could also be ml_dsa_65 or ml_dsa_87.
+    ml_dsa_65,
+    ml_dsa_65::{PrivateKey as SigningKey, PublicKey as VerifyingKey},
+}; // Could also be ml_dsa_44 or ml_dsa_87.
 use mysteryn_core::{
     RawSignature,
     attributes::{KeyAttributes, SignatureAttributes},
@@ -20,27 +20,27 @@ use std::{
 };
 
 #[derive(Clone)]
-pub struct MlDsa44SecretKey(SigningKey);
+pub struct MlDsa65SecretKey(SigningKey);
 
-impl MlDsa44SecretKey {
+impl MlDsa65SecretKey {
     pub fn new() -> Self {
-        Self::with_rng(&mut rng()).expect("cannot generate MlDsa44")
+        Self::with_rng(&mut rng()).expect("cannot generate MlDsa65")
     }
 
     pub fn with_rng<R: RngCore + CryptoRng>(rng: &mut R) -> Result<Self> {
         let (_pk, sk) =
-            ml_dsa_44::try_keygen_with_rng(rng).map_err(|e| Error::EncodingError(e.to_string()))?;
+            ml_dsa_65::try_keygen_with_rng(rng).map_err(|e| Error::EncodingError(e.to_string()))?;
         Ok(Self(sk))
     }
 }
 
-impl Default for MlDsa44SecretKey {
+impl Default for MlDsa65SecretKey {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl SecretKeyTrait for MlDsa44SecretKey {
+impl SecretKeyTrait for MlDsa65SecretKey {
     fn codec(&self) -> u64 {
         multicodec_prefix::CUSTOM
     }
@@ -54,11 +54,11 @@ impl SecretKeyTrait for MlDsa44SecretKey {
     }
 
     fn algorithm_name(&self) -> &'static str {
-        known_algorithm_name::MLDSA44
+        known_algorithm_name::MLDSA65
     }
 
     fn public_key(&self) -> Box<dyn PublicKeyTrait> {
-        Box::new(MlDsa44PublicKey(self.0.get_public_key()))
+        Box::new(MlDsa65PublicKey(self.0.get_public_key()))
     }
 
     fn to_bytes(&self) -> Vec<u8> {
@@ -100,7 +100,7 @@ impl SecretKeyTrait for MlDsa44SecretKey {
     }
 
     fn verify(&self, data: &[u8], signature: &RawSignature) -> Result<()> {
-        let mut s: [u8; 2420] = [0; 2420];
+        let mut s: [u8; 3309] = [0; 3309];
         let mut r = signature.as_slice();
         std::io::copy(&mut r, &mut s.as_mut_slice())
             .map_err(|e| Error::InvalidSignature(e.to_string()))?;
@@ -115,7 +115,7 @@ impl SecretKeyTrait for MlDsa44SecretKey {
     }
 
     fn signature(&self, signature: &RawSignature) -> Result<Box<dyn SignatureTrait>> {
-        Ok(Box::new(MlDsa44Signature::try_from(signature)?))
+        Ok(Box::new(MlDsa65Signature::try_from(signature)?))
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -123,27 +123,27 @@ impl SecretKeyTrait for MlDsa44SecretKey {
     }
 }
 
-impl Display for MlDsa44SecretKey {
+impl Display for MlDsa65SecretKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = multibase::to_base58(&self.to_bytes());
         write!(f, "{s}")
     }
 }
 
-impl std::fmt::Debug for MlDsa44SecretKey {
+impl std::fmt::Debug for MlDsa65SecretKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "MlDsa44SecretKey({})",
+            "MlDsa65SecretKey({})",
             multibase::to_base58(&self.to_bytes())
         )
     }
 }
 
-impl TryFrom<&[u8]> for MlDsa44SecretKey {
+impl TryFrom<&[u8]> for MlDsa65SecretKey {
     type Error = Error;
     fn try_from(bytes: &[u8]) -> Result<Self> {
-        let mut buf: [u8; 2560] = [0; 2560];
+        let mut buf: [u8; 4032] = [0; 4032];
         let mut r = bytes;
         std::io::copy(&mut r, &mut buf.as_mut_slice())
             .map_err(|e| Error::InvalidKey(e.to_string()))?;
@@ -153,7 +153,7 @@ impl TryFrom<&[u8]> for MlDsa44SecretKey {
     }
 }
 
-impl FromStr for MlDsa44SecretKey {
+impl FromStr for MlDsa65SecretKey {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
@@ -162,11 +162,11 @@ impl FromStr for MlDsa44SecretKey {
     }
 }
 
-impl TryFrom<&KeyAttributes> for MlDsa44SecretKey {
+impl TryFrom<&KeyAttributes> for MlDsa65SecretKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            let mut buf: [u8; 2560] = [0; 2560];
+            let mut buf: [u8; 4032] = [0; 4032];
             let mut r = key_data.as_slice();
             std::io::copy(&mut r, &mut buf.as_mut_slice())
                 .map_err(|e| Error::InvalidKey(e.to_string()))?;
@@ -180,9 +180,9 @@ impl TryFrom<&KeyAttributes> for MlDsa44SecretKey {
 }
 
 #[derive(Clone)]
-pub struct MlDsa44PublicKey(VerifyingKey);
+pub struct MlDsa65PublicKey(VerifyingKey);
 
-impl PublicKeyTrait for MlDsa44PublicKey {
+impl PublicKeyTrait for MlDsa65PublicKey {
     fn codec(&self) -> u64 {
         multicodec_prefix::CUSTOM
     }
@@ -196,7 +196,7 @@ impl PublicKeyTrait for MlDsa44PublicKey {
     }
 
     fn algorithm_name(&self) -> &'static str {
-        known_algorithm_name::MLDSA44
+        known_algorithm_name::MLDSA65
     }
 
     fn to_bytes(&self) -> Vec<u8> {
@@ -212,7 +212,7 @@ impl PublicKeyTrait for MlDsa44PublicKey {
     }
 
     fn verify(&self, data: &[u8], signature: &RawSignature) -> Result<()> {
-        let mut s: [u8; 2420] = [0; 2420];
+        let mut s: [u8; 3309] = [0; 3309];
         let mut r = signature.as_slice();
         std::io::copy(&mut r, &mut s.as_mut_slice())
             .map_err(|e| Error::InvalidSignature(e.to_string()))?;
@@ -227,7 +227,7 @@ impl PublicKeyTrait for MlDsa44PublicKey {
     }
 
     fn signature(&self, signature: &RawSignature) -> Result<Box<dyn SignatureTrait>> {
-        Ok(Box::new(MlDsa44Signature::try_from(signature)?))
+        Ok(Box::new(MlDsa65Signature::try_from(signature)?))
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -235,35 +235,35 @@ impl PublicKeyTrait for MlDsa44PublicKey {
     }
 }
 
-impl PartialEq for MlDsa44PublicKey {
+impl PartialEq for MlDsa65PublicKey {
     fn eq(&self, other: &Self) -> bool {
         self.0.clone().into_bytes() == other.0.clone().into_bytes()
     }
 }
 
-impl Eq for MlDsa44PublicKey {}
+impl Eq for MlDsa65PublicKey {}
 
-impl Display for MlDsa44PublicKey {
+impl Display for MlDsa65PublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = multibase::to_base58(&self.to_bytes());
         write!(f, "{s}")
     }
 }
 
-impl std::fmt::Debug for MlDsa44PublicKey {
+impl std::fmt::Debug for MlDsa65PublicKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "MlDsa44PublicKey({})",
+            "MlDsa65PublicKey({})",
             multibase::to_base58(&self.to_bytes())
         )
     }
 }
 
-impl TryFrom<&[u8]> for MlDsa44PublicKey {
+impl TryFrom<&[u8]> for MlDsa65PublicKey {
     type Error = Error;
     fn try_from(bytes: &[u8]) -> Result<Self> {
-        let mut buf: [u8; 1312] = [0; 1312];
+        let mut buf: [u8; 1952] = [0; 1952];
         let mut r = bytes;
         std::io::copy(&mut r, &mut buf.as_mut_slice())
             .map_err(|e| Error::InvalidKey(e.to_string()))?;
@@ -273,7 +273,7 @@ impl TryFrom<&[u8]> for MlDsa44PublicKey {
     }
 }
 
-impl FromStr for MlDsa44PublicKey {
+impl FromStr for MlDsa65PublicKey {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
@@ -282,7 +282,7 @@ impl FromStr for MlDsa44PublicKey {
     }
 }
 
-impl TryFrom<&KeyAttributes> for MlDsa44PublicKey {
+impl TryFrom<&KeyAttributes> for MlDsa65PublicKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
@@ -294,9 +294,9 @@ impl TryFrom<&KeyAttributes> for MlDsa44PublicKey {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Debug, Clone)]
-pub struct MlDsa44Signature(RawSignature);
+pub struct MlDsa65Signature(RawSignature);
 
-impl SignatureTrait for MlDsa44Signature {
+impl SignatureTrait for MlDsa65Signature {
     fn codec(&self) -> u64 {
         multicodec_prefix::CUSTOM
     }
@@ -306,7 +306,7 @@ impl SignatureTrait for MlDsa44Signature {
     }
 
     fn algorithm_name(&self) -> &'static str {
-        known_algorithm_name::MLDSA44
+        known_algorithm_name::MLDSA65
     }
 
     fn as_bytes(&self) -> &[u8] {
@@ -322,21 +322,21 @@ impl SignatureTrait for MlDsa44Signature {
     }
 }
 
-impl TryFrom<&[u8]> for MlDsa44Signature {
+impl TryFrom<&[u8]> for MlDsa65Signature {
     type Error = Error;
     fn try_from(bytes: &[u8]) -> Result<Self> {
         Ok(Self(RawSignature::from(bytes)))
     }
 }
 
-impl TryFrom<&RawSignature> for MlDsa44Signature {
+impl TryFrom<&RawSignature> for MlDsa65Signature {
     type Error = Error;
     fn try_from(signature: &RawSignature) -> Result<Self> {
         Ok(Self(signature.clone()))
     }
 }
 
-impl Display for MlDsa44Signature {
+impl Display for MlDsa65Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(&multibase::to_base58(self.as_bytes()))
     }
@@ -344,28 +344,28 @@ impl Display for MlDsa44Signature {
 
 #[cfg(test)]
 mod tests {
-    use super::{MlDsa44PublicKey, MlDsa44SecretKey};
+    use super::{MlDsa65PublicKey, MlDsa65SecretKey};
     use mysteryn_core::{key_traits::*, result::Result};
     use std::str::FromStr;
     #[cfg(all(target_family = "wasm", target_os = "unknown"))]
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    const SECRET: &str = "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";
-    const PUBLIC: &str = "zLj4W2rqZXwPimzdxtLSjqyicmJXmwTTTrziVEeCxFJaufhQ62XtWQpAnUTELVSt8BvcUm3bAByJE8XhiPteysLDE6ZgmYDxctu4keRY7kshqMMDc9ca5CQNkk8dQ7qKgeSnxLXdwJt8J3iJxcYoPM3AkHRKPXY3rawvwURk2tssTmUGofmvnGsz81kFaRqH6dm3xX1AeS2MqzLgdQWU3pbGfo7WhkhCzAC3AU7t7PbvLvaC8PCbh7zCf4XEKN1q3F7sZ5zHioNRhvR9oT84FTsL243dEDYv8RyRLqh5YeUZvxrt88WLDuc7339x3m91FhB3XirnJZBppDQf9V1T3Z2ffVT8a25PazeAYjMvw1ETUnWiiYsRWLKfq7bKMEotGYreLo163jkdjKrRRi1VQJ8Xpsy3m9PHAHkHsuDDJPrsMxY9iTMsEsb4syn6EF1CL6jLMVfqLrb5gVCBhaj9UL1G8rbVjDoN7tuLJf6Qua6MP8xtZyubc7bfU2ahWsZMhckB8PTTmQtXqm51cJjEpunJcQjiWP1W1eNRZjTRtSeU12Wjkdzpn2T1j4F4HTvQ1nnxybD6d274SKq3CRN8Wy7fkKhUQmCzRvKWiXuf5V73xZn2eZYTdRrTxQcRV9KjtjER3VrfQ2mUVKeuEe4QChBnMe4uzuWzj9Djyv44v4uzHAfXmdfUJtE1RoaL3PN3iKXQAVS2XMAfxy8D2fAdN4C38FTHpWFhZfCP3UgJBuTgTvZ1vrpGQyAZSrTtoM5MqQ7LHHWMdVM4RyakUC78EaTko77h7cz2AdUDne6ZyYjNusYK5ecGCTSmaigCSYNGZbpqsSHgdiZPjgdxj7UsT6hCMiEPdT2sKWwhLomSVqCSF2mgr4jNqLBuk9554ZTKnz7MNBaQvX9G7LYzQyfbXSYsMoLA2k9ZSQWr9EYJWRqfkTWQJJwCg3dxZFq58pVWZhJV3v43ncArXuTRZSxruyBg1ea5bssevcs67ozrTBS258fEtZiZSZ1maLTvauJMF7E1F59T14DP2JQfJ49ocDNN5c68CQwkDZLsy4aLcd5Hs15vhtzZQv5yXKuMaazjrkAiFFjXRiDryhgApJ9h7XR6opiEqiornQwbLuKxE7uvym9HMnkT3cc1UvVyATKgo3nyY8HrgXQ1mDDV1UJdM85wSxutwN6mKUYgtBeEXH4FtrNkLV122X1UXZSFTJJYAjUubcjJb4wGoE4zePe7byHUdGU6dfrqqpRnbRwGCjY1LoWJ1Tv3HTUmycxykgwN42BgqTRFYnuYC6gfRogstNCzKpvM4qyqWTRyQSnkGkKZMm7rRidx5JKHrZihNQTZLgtbn7RUG7dNZ9j4CCDwt73Eb1fgMbFS82HX25mWz3dtjkU4NYjs9LVTy1793K6WPigCCLFw8rGnuT9jMdiwJZEzmgzDDCRU63umkqXRd21gKT7Qv2xpRemhfXyf3ZkunXyA3RjDwdJXab5J4djZ8Vs7dP8WDazvPgEYG8GdcNdcjoE15e2zCpKidNZzYTcRsmSs95FWp4bYobUB1KBruxfemfZUAB6J8Qi1hgiL7DsL4hPuW5piCShPwNcRXbbKPhG9xQwnS6gBeRUX6jrPiABAat8Q4S4BZuwWc1u8BmNX3V7yBv46bQdPafR3ViPmckeBuRjnEgYMYB4mSbfBjKM33iWU3Nm2mNjtkkGcfcsEcuyqFkMHX6TodY9RuSMoDT2FrMMWtSrYBmVbA6v7ZmgfAnWHmDKbL75uTWoWYsWnSDzN4YNwHp9XUcqGoNTVq";
+    const SECRET: &str = "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";
+    const PUBLIC: &str = "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";
 
     #[cfg_attr(all(target_family = "wasm", target_os = "unknown"), wasm_bindgen_test)]
     #[test]
     fn it_can_serialize_and_deserialize() -> Result<()> {
-        let secret_key = MlDsa44SecretKey::from_str(SECRET)?;
+        let secret_key = MlDsa65SecretKey::from_str(SECRET)?;
         let public_key = secret_key.public_key();
 
         assert_eq!(secret_key.to_string(), SECRET);
         assert_eq!(public_key.to_string(), PUBLIC);
 
-        let public_key = MlDsa44PublicKey::from_str(PUBLIC)?;
+        let public_key = MlDsa65PublicKey::from_str(PUBLIC)?;
         assert_eq!(public_key.to_string(), PUBLIC);
 
-        let secret_key = MlDsa44SecretKey::new();
+        let secret_key = MlDsa65SecretKey::new();
         let public_key = secret_key.public_key();
 
         let secret_key_bytes = secret_key.to_bytes();
@@ -373,20 +373,20 @@ mod tests {
         let secret_key_str = secret_key.to_string();
         let public_key_str = public_key.to_string();
 
-        let restored_secret_key = MlDsa44SecretKey::try_from(secret_key_bytes.as_slice())?;
+        let restored_secret_key = MlDsa65SecretKey::try_from(secret_key_bytes.as_slice())?;
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
-        let restored_public_key = MlDsa44PublicKey::try_from(public_key_bytes.as_slice())?;
+        let restored_public_key = MlDsa65PublicKey::try_from(public_key_bytes.as_slice())?;
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
-        let restored_secret_key = MlDsa44SecretKey::from_str(&secret_key_str)?;
+        let restored_secret_key = MlDsa65SecretKey::from_str(&secret_key_str)?;
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
-        let restored_public_key = MlDsa44PublicKey::from_str(&public_key_str)?;
+        let restored_public_key = MlDsa65PublicKey::from_str(&public_key_str)?;
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         Ok(())
@@ -395,7 +395,7 @@ mod tests {
     #[cfg_attr(all(target_family = "wasm", target_os = "unknown"), wasm_bindgen_test)]
     #[test]
     fn public_key_is_consistent() -> Result<()> {
-        let secret_key = MlDsa44SecretKey::from_str(SECRET)?;
+        let secret_key = MlDsa65SecretKey::from_str(SECRET)?;
         let public_key1 = secret_key.public_key();
         let public_key2 = secret_key.public_key();
 
@@ -407,7 +407,7 @@ mod tests {
     #[cfg_attr(all(target_family = "wasm", target_os = "unknown"), wasm_bindgen_test)]
     #[test]
     fn it_can_sign_and_verify_a_message() -> Result<()> {
-        let private_key = MlDsa44SecretKey::from_str(SECRET)?;
+        let private_key = MlDsa65SecretKey::from_str(SECRET)?;
         let public_key = private_key.public_key();
         let data = b"test data";
         let signature = private_key.sign_deterministic(data, None, None)?;

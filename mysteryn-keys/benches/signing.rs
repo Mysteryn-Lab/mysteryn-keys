@@ -7,10 +7,10 @@ mod bench_signing {
         bls12381g1::Bls12381G1SecretKey, ed448::Ed448SecretKey, ed25519::Ed25519SecretKey,
         faest128f::Faest128fSecretKey, falcon512::Falcon512SecretKey,
         falcon1024::Falcon1024SecretKey, hmac_sha256::HmacSha256SecretKey,
-        mldsa44::MlDsa44SecretKey, mlkem512::MlKem512SecretKey, p256::P256SecretKey,
-        p384::P384SecretKey, p521::P521SecretKey, rsa::Rs256SecretKey, rsa::Rs512SecretKey,
-        secp256k1::Secp256k1SecretKey, slhdsashake128f::SlhDsaShake128fSecretKey,
-        x25519::X25519SecretKey,
+        mldsa44::MlDsa44SecretKey, mldsa65::MlDsa65SecretKey, mldsa87::MlDsa87SecretKey,
+        mlkem512::MlKem512SecretKey, p256::P256SecretKey, p384::P384SecretKey, p521::P521SecretKey,
+        rsa::Rs256SecretKey, rsa::Rs512SecretKey, secp256k1::Secp256k1SecretKey,
+        slhdsashake128f::SlhDsaShake128fSecretKey, x25519::X25519SecretKey,
     };
 
     #[global_allocator]
@@ -63,6 +63,18 @@ mod bench_signing {
     #[bench]
     fn MlDsa44(bencher: Bencher) {
         let key = MlDsa44SecretKey::new();
+        bencher.bench(|| black_box(key.sign(DATA, None)))
+    }
+
+    #[bench]
+    fn MlDsa65(bencher: Bencher) {
+        let key = MlDsa65SecretKey::new();
+        bencher.bench(|| black_box(key.sign(DATA, None)))
+    }
+
+    #[bench]
+    fn MlDsa87(bencher: Bencher) {
+        let key = MlDsa87SecretKey::new();
         bencher.bench(|| black_box(key.sign(DATA, None)))
     }
 
