@@ -13,7 +13,7 @@ use mysteryn_core::{
 };
 use rand08::{CryptoRng, RngCore, thread_rng as rng};
 use serde::{Deserialize, Serialize};
-use std::{any::Any, fmt::Display, str::FromStr};
+use std::{any::Any, borrow::Cow, fmt::Display, str::FromStr};
 
 #[derive(Clone)]
 pub struct Faest128fSecretKey(SigningKey);
@@ -56,11 +56,11 @@ impl SecretKeyTrait for Faest128fSecretKey {
         Box::new(Faest128fPublicKey(self.0.verifying_key()))
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.to_bytes().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.to_bytes().to_vec().into()
     }
 
-    fn get_shared_secret(&self, _: Option<Vec<u8>>) -> Option<Vec<u8>> {
+    fn get_shared_secret(&self, _: Option<&[u8]>) -> Option<Vec<u8>> {
         None
     }
 
@@ -75,7 +75,7 @@ impl SecretKeyTrait for Faest128fSecretKey {
     fn sign_exchange(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         _: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         let signature: Signature = self
@@ -88,7 +88,7 @@ impl SecretKeyTrait for Faest128fSecretKey {
     fn sign_deterministic(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         _: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         let signature: Signature = self
@@ -156,8 +156,8 @@ impl TryFrom<&KeyAttributes> for Faest128fSecretKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            let secret_key = SigningKey::try_from(key_data.as_slice())
-                .map_err(|e| Error::InvalidKey(e.to_string()))?;
+            let secret_key =
+                SigningKey::try_from(key_data).map_err(|e| Error::InvalidKey(e.to_string()))?;
             Ok(Self(secret_key))
         } else {
             Err(Error::InvalidKey("invalid attributes".to_owned()))
@@ -233,8 +233,8 @@ impl PublicKeyTrait for Faest128fPublicKey {
         known_algorithm_name::FAEST128f
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.to_bytes().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.to_bytes().to_vec().into()
     }
 
     fn get_ciphertext(&self, _nonce: Option<&[u8]>) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -310,8 +310,8 @@ impl TryFrom<&KeyAttributes> for Faest128fPublicKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            let public_key = VerifyingKey::try_from(key_data.as_slice())
-                .map_err(|e| Error::InvalidKey(e.to_string()))?;
+            let public_key =
+                VerifyingKey::try_from(key_data).map_err(|e| Error::InvalidKey(e.to_string()))?;
             Ok(Self(public_key))
         } else {
             Err(Error::InvalidKey("invalid attributes".to_owned()))
@@ -459,12 +459,12 @@ mod tests {
         let secret_key_str = secret_key.to_string();
         let public_key_str = public_key.to_string();
 
-        let restored_secret_key = Faest128fSecretKey::try_from(secret_key_bytes.as_slice())?;
+        let restored_secret_key = Faest128fSecretKey::try_from(secret_key_bytes.as_ref())?;
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
-        let restored_public_key = Faest128fPublicKey::try_from(public_key_bytes.as_slice())?;
+        let restored_public_key = Faest128fPublicKey::try_from(public_key_bytes.as_ref())?;
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_secret_key = Faest128fSecretKey::from_str(&secret_key_str)?;

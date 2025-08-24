@@ -17,6 +17,7 @@ use rand08::{CryptoRng, RngCore, thread_rng as rng};
 use serde::{Deserialize, Serialize};
 use std::{
     any::Any,
+    borrow::Cow,
     fmt::{Debug, Display},
     str::FromStr,
 };
@@ -62,13 +63,13 @@ impl SecretKeyTrait for MlKem512SecretKey {
         Box::new(MlKem512PublicKey(self.0.encapsulation_key().clone()))
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.as_bytes().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.as_bytes().to_vec().into()
     }
 
-    fn get_shared_secret(&self, cipertext: Option<Vec<u8>>) -> Option<Vec<u8>> {
+    fn get_shared_secret(&self, cipertext: Option<&[u8]>) -> Option<Vec<u8>> {
         if let Some(cipertext) = cipertext {
-            let Ok(ct) = EncodedCiphertext::<MlKem512Params>::try_from(cipertext.as_slice()) else {
+            let Ok(ct) = EncodedCiphertext::<MlKem512Params>::try_from(cipertext) else {
                 return None;
             };
             let Ok(k_recv) = self.0.decapsulate(&ct);
@@ -89,12 +90,12 @@ impl SecretKeyTrait for MlKem512SecretKey {
     fn sign_exchange(
         &self,
         data: &[u8],
-        other_public_key_raw_bytes: Option<Vec<u8>>,
+        other_public_key_raw_bytes: Option<&[u8]>,
         _: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         if let Some(other_public_key_raw_bytes) = other_public_key_raw_bytes {
             let encoded = Encoded::<EncapsulationKey<MlKem512Params>>::try_from(
-                other_public_key_raw_bytes.as_slice(),
+                other_public_key_raw_bytes.as_ref(),
             )
             .map_err(|e| Error::InvalidKey(e.to_string()))?;
             let e_key = EncapsulationKey::<MlKem512Params>::from_bytes(&encoded);
@@ -122,12 +123,12 @@ impl SecretKeyTrait for MlKem512SecretKey {
     fn sign_deterministic(
         &self,
         data: &[u8],
-        other_public_key_raw_bytes: Option<Vec<u8>>,
+        other_public_key_raw_bytes: Option<&[u8]>,
         attributes: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         if let Some(other_public_key_raw_bytes) = other_public_key_raw_bytes {
             let encoded = Encoded::<EncapsulationKey<MlKem512Params>>::try_from(
-                other_public_key_raw_bytes.as_slice(),
+                other_public_key_raw_bytes.as_ref(),
             )
             .map_err(|e| Error::InvalidKey(e.to_string()))?;
             let e_key = EncapsulationKey::<MlKem512Params>::from_bytes(&encoded);
@@ -142,8 +143,7 @@ impl SecretKeyTrait for MlKem512SecretKey {
             };
             let (ct, k_send) = e_key
                 .encapsulate_deterministic(
-                    &B32::try_from(nonce.as_slice())
-                        .map_err(|e| Error::ValidationError(e.to_string()))?,
+                    &B32::try_from(nonce).map_err(|e| Error::ValidationError(e.to_string()))?,
                 )
                 .map_err(|e| Error::InvalidKey(e.to_string()))?;
 
@@ -166,7 +166,7 @@ impl SecretKeyTrait for MlKem512SecretKey {
     fn verify(&self, data: &[u8], signature: &RawSignature) -> Result<()> {
         let mut buf = signature.as_slice();
         let ct = read_varbytes(&mut buf).map_err(|e| Error::InvalidSignature(e.to_string()))?;
-        let Some(k_recv) = self.get_shared_secret(Some(ct.as_slice().to_vec())) else {
+        let Some(k_recv) = self.get_shared_secret(Some(&ct)) else {
             return Err(Error::InvalidSignature(
                 "cannot get shared secret".to_owned(),
             ));
@@ -227,9 +227,8 @@ impl TryFrom<&KeyAttributes> for MlKem512SecretKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            let encoded =
-                Encoded::<DecapsulationKey<MlKem512Params>>::try_from(key_data.as_slice())
-                    .map_err(|e| Error::InvalidKey(e.to_string()))?;
+            let encoded = Encoded::<DecapsulationKey<MlKem512Params>>::try_from(key_data)
+                .map_err(|e| Error::InvalidKey(e.to_string()))?;
             let key = DecapsulationKey::<MlKem512Params>::from_bytes(&encoded);
             Ok(Self(key))
         } else {
@@ -306,8 +305,8 @@ impl PublicKeyTrait for MlKem512PublicKey {
         known_algorithm_name::MLKEM512
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.as_bytes().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.as_bytes().to_vec().into()
     }
 
     fn get_ciphertext(&self, nonce: Option<&[u8]>) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -400,9 +399,8 @@ impl TryFrom<&KeyAttributes> for MlKem512PublicKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            let encoded =
-                Encoded::<EncapsulationKey<MlKem512Params>>::try_from(key_data.as_slice())
-                    .map_err(|e| Error::InvalidKey(e.to_string()))?;
+            let encoded = Encoded::<EncapsulationKey<MlKem512Params>>::try_from(key_data)
+                .map_err(|e| Error::InvalidKey(e.to_string()))?;
             let key = EncapsulationKey::<MlKem512Params>::from_bytes(&encoded);
             Ok(Self(key))
         } else {
@@ -413,7 +411,7 @@ impl TryFrom<&KeyAttributes> for MlKem512PublicKey {
 
 impl PartialOrd for MlKem512PublicKey {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.to_bytes().cmp(&other.to_bytes()))
+        Some(self.0.as_bytes().cmp(&other.0.as_bytes()))
     }
 }
 
@@ -552,12 +550,12 @@ mod tests {
         let secret_key_str = secret_key.to_string();
         let public_key_str = public_key.to_string();
 
-        let restored_secret_key = MlKem512SecretKey::try_from(secret_key_bytes.as_slice())?;
+        let restored_secret_key = MlKem512SecretKey::try_from(secret_key_bytes.as_ref())?;
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
-        let restored_public_key = MlKem512PublicKey::try_from(public_key_bytes.as_slice())?;
+        let restored_public_key = MlKem512PublicKey::try_from(public_key_bytes.as_ref())?;
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_secret_key = MlKem512SecretKey::from_str(&secret_key_str)?;
@@ -599,7 +597,7 @@ mod tests {
         // A -> B
         let signature_a = private_key_a.sign_deterministic(
             data,
-            Some(public_key_b.to_bytes()),
+            Some(public_key_b.to_bytes().as_ref()),
             Some(&mut attributes),
         )?;
 
@@ -612,7 +610,7 @@ mod tests {
         // B -> A
         let signature_b = private_key_b.sign_deterministic(
             data,
-            Some(public_key_a.to_bytes()),
+            Some(public_key_a.to_bytes().as_ref()),
             Some(&mut attributes),
         )?;
         private_key_a.verify(data, &signature_b)?;
@@ -623,7 +621,9 @@ mod tests {
             "([e3, 71, b8, df, 32, 6c, 74, 53, 61, 70, d3, 21, 93, 63, fd, 77, b3, f6, 4d, c7, dc, 13, b5, 9e, 46, db, 41, 41, ed, a7, 80, e, 25, ff, d, 14, 50, fc, 8b, f7, e5, b6, b1, 5c, 95, c4, 69, ee, 7f, c0, 84, a0, 55, a3, 29, f, 72, cd, 60, 66, 70, c0, 3c, f3, 45, 12, 35, d7, 7f, 20, d1, ad, 6b, 76, a5, 3, 2b, 85, 1c, 92, 1f, 4e, 9a, e3, 92, e9, b4, 94, b4, 2b, 66, 3d, fc, 2f, 25, 37, 7c, ce, 4b, 78, cc, 6b, 81, e, a0, 8b, 47, 34, 12, d1, 84, d5, 8d, 3a, ef, bb, b2, 5e, 57, 1f, 26, b7, dc, f7, fa, 42, e4, 80, 0, 26, 9b, bb, 39, a5, 6f, ac, e2, a3, 47, eb, 9c, 76, 59, c5, 85, d7, 47, a, 59, 7b, e1, 89, f1, 41, 49, 88, 1f, 5e, 51, 9f, 79, 8c, eb, 38, 36, 74, e9, 76, 85, 6e, 2c, 83, 9, 95, 3e, 7a, 25, 38, 5c, 23, ca, 73, 7e, fc, d1, 6d, 4, cb, 8e, 9c, 44, 3, 4d, c6, de, db, d2, a, d, b, 13, 12, 55, 92, fb, 4f, 39, f7, 42, f5, 98, 66, 46, 9a, 88, b1, dc, 50, cd, ae, ee, 65, 2a, 9a, 9, 9a, b3, c4, 98, 3a, b4, ea, c7, 1a, d4, 44, fe, f5, 9e, 73, a3, bc, 4a, d1, 69, c8, 8f, 3f, 5e, 76, a9, f9, b9, 4, 15, 21, 63, 50, 7, b2, 90, 66, e1, 4a, 9f, 1a, c6, c4, 5c, 9d, 5b, de, 23, 6d, 35, d5, ae, d1, db, 5, 2b, d8, d6, bd, ab, 45, 2, 91, 5c, d9, 83, 94, 50, ed, 35, 52, c1, 73, fb, dd, b6, 73, c3, 8a, f7, d4, 63, 32, 44, 18, 31, bc, 7b, b3, 57, bc, 69, 3e, c5, fb, 51, be, 6e, 64, 2e, b5, 0, fc, b1, 12, 5e, dd, 5b, a3, b8, 56, ce, 64, 76, 82, 75, 1e, 62, 13, cd, 2e, e2, 16, 3e, 75, f1, b9, a0, 99, 28, fc, b0, 40, 7f, d3, 94, 9c, 7b, 84, 5b, 29, 55, ff, f3, 6f, d6, 1a, 70, ec, 49, f2, 47, 6, 4d, 54, 2f, d1, 38, 5c, c2, 5c, d, 27, b, fb, 69, 1b, 5c, f0, 2a, 49, 8, b2, d, a, 5a, f8, de, 12, 33, 6c, 4a, 8d, 2f, 2c, 8d, 57, 32, 29, 1d, 7e, 57, 5d, dc, b6, 6e, 7b, b3, 50, bb, 55, 81, f9, ba, b, 88, af, 1d, 17, 8f, 8b, de, b4, 78, 21, 76, dd, 8a, 87, 11, c2, 77, cd, 76, 4b, f5, 3c, 8d, 31, df, 2a, 8a, 3d, 2c, 18, ff, e4, b5, 8c, b2, 94, 5c, 47, 12, 7e, a3, 9, b0, e5, 28, 6c, 52, f1, 15, 3f, 8, f4, 75, 85, c, a3, 19, 8e, 91, 86, f1, 37, 5b, 7f, e, 3a, 1f, fc, ec, 17, c3, 87, 51, f7, c2, 5d, a3, b4, a2, 55, b0, 6d, 38, 9c, f4, 4f, 70, c0, 70, c4, 8, 1a, 77, a2, 49, 8e, 3e, c, 8c, f0, c3, 5f, 2e, 5d, cc, 6d, 47, 67, 24, e0, bd, fc, d7, 40, 47, 4f, de, 2f, be, ee, 8d, 90, b0, a0, 13, a9, be, f, 7c, 40, 25, fc, ce, f5, 62, df, 4a, b, 4f, bf, 77, d4, da, b2, f4, c0, 68, 31, a0, 18, d5, 1b, 4b, e1, 66, 18, f7, 15, 8, 68, d8, d, ad, b6, 43, 37, 8c, 7c, 98, 4, 33, 13, 23, c8, cb, e4, e5, 19, 82, b9, ef, 1e, 12, 81, eb, 4e, 2d, f6, 3a, 1e, 2e, 5, 3f, 9e, 1e, 8a, 8a, 7, a2, 36, cd, c2, 1a, f8, 72, 4, 95, 3e, 33, 58, 50, 4f, 62, 43, 82, e2, ac, 18, 30, 95, 27, 34, c0, 2b, de, 7e, 34, 2f, 8d, dd, 8c, 1f, b0, 70, bc, 66, d5, 3c, f5, e, fc, 29, 89, e6, b3, b, 94, 12, ef, f2, af, 55, 9, 6b, 65, 59, 72, 9c, b6, 16, 4, ba, 8b, e1, ea, ba, 83, 73, f2, ce, c3, 7d, f9, 82, 18, 1e, f5, a7, a1, 84, 3d, 95, 44, e3, 62, f3, a4, 3c, dd, 71, b, f5, 6e, df, 16, 57, 89, e2, cb, c4, aa, cc, 4, d0, 6f, 97, 16, e4, 5e, 60, 64, c5, ad, 65, f6, 38, 4e, 82, 80, 75, 94, 89, 86, 22, 6c, 46, 7b, b, 47, 62, 12, e4, 45, 72, a7, 95, 2e, 38], [9, 47, 34, c3, b7, 64, 2b, d0, c8, 23, 7f, 47, c5, 89, 7a, 75, 21, 37, be, 3b, 2b, 62, ee, 93, 1d, e9, a7, c4, eb, 73, 7c, ac])"
         );
 
-        let shared_secret_a = private_key_a.get_shared_secret(Some(ciphertext.0)).unwrap();
+        let shared_secret_a = private_key_a
+            .get_shared_secret(Some(&ciphertext.0))
+            .unwrap();
         let shared_secret_b = ciphertext.1;
         assert_eq!(shared_secret_a, shared_secret_b);
 

@@ -12,6 +12,7 @@ use rand08::{CryptoRng, RngCore, thread_rng as rng};
 use serde::{Deserialize, Serialize};
 use std::{
     any::Any,
+    borrow::Cow,
     fmt::{Debug, Display},
     str::FromStr,
 };
@@ -51,17 +52,17 @@ impl SecretKeyTrait for X25519SecretKey {
         Box::new(X25519PublicKey(VerifyingKey::from(&self.0)))
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.as_ref().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.as_ref().into()
     }
 
-    fn get_shared_secret(&self, ciphertext: Option<Vec<u8>>) -> Option<Vec<u8>> {
+    fn get_shared_secret(&self, ciphertext: Option<&[u8]>) -> Option<Vec<u8>> {
         if let Some(ciphertext) = ciphertext {
             if ciphertext.len() != 32 {
                 return None;
             }
             let mut buf: [u8; 32] = [0; 32];
-            buf.copy_from_slice(ciphertext.as_slice());
+            buf.copy_from_slice(ciphertext);
             let shared_secret = x25519(self.0.to_bytes(), buf);
             Some(shared_secret.to_vec())
         } else {
@@ -80,7 +81,7 @@ impl SecretKeyTrait for X25519SecretKey {
     fn sign_exchange(
         &self,
         data: &[u8],
-        other_public_key_raw_bytes: Option<Vec<u8>>,
+        other_public_key_raw_bytes: Option<&[u8]>,
         _: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         if let Some(other_public_key_raw_bytes) = other_public_key_raw_bytes {
@@ -108,7 +109,7 @@ impl SecretKeyTrait for X25519SecretKey {
     fn sign_deterministic(
         &self,
         data: &[u8],
-        other_public_key_raw_bytes: Option<Vec<u8>>,
+        other_public_key_raw_bytes: Option<&[u8]>,
         attributes: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         self.sign_exchange(data, other_public_key_raw_bytes, attributes)
@@ -117,7 +118,7 @@ impl SecretKeyTrait for X25519SecretKey {
     fn verify(&self, data: &[u8], signature: &RawSignature) -> Result<()> {
         let mut buf = signature.as_slice();
         let ct = read_varbytes(&mut buf).map_err(|e| Error::InvalidSignature(e.to_string()))?;
-        let Some(shared_secret) = self.get_shared_secret(Some(ct)) else {
+        let Some(shared_secret) = self.get_shared_secret(Some(&ct)) else {
             return Err(Error::InvalidKey("cannot get shared secret".to_owned()));
         };
         let embedded_signature =
@@ -259,8 +260,8 @@ impl PublicKeyTrait for X25519PublicKey {
         known_algorithm_name::X25519
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.as_ref().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.as_ref().into()
     }
 
     fn get_ciphertext(&self, _nonce: Option<&[u8]>) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -482,12 +483,12 @@ mod tests {
         let secret_key_str = secret_key.to_string();
         let public_key_str = public_key.to_string();
 
-        let restored_secret_key = X25519SecretKey::try_from(secret_key_bytes.as_slice())?;
+        let restored_secret_key = X25519SecretKey::try_from(secret_key_bytes.as_ref())?;
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
-        let restored_public_key = X25519PublicKey::try_from(public_key_bytes.as_slice())?;
+        let restored_public_key = X25519PublicKey::try_from(public_key_bytes.as_ref())?;
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_secret_key = X25519SecretKey::from_str(&secret_key_str)?;
@@ -525,7 +526,7 @@ mod tests {
 
         // A -> B
         let signature_a =
-            private_key_a.sign_deterministic(data, Some(public_key_b.to_bytes()), None)?;
+            private_key_a.sign_deterministic(data, Some(&public_key_b.to_bytes()), None)?;
 
         assert_eq!(
             signature_a.to_string(),
@@ -535,7 +536,7 @@ mod tests {
 
         // B -> A
         let signature_b =
-            private_key_b.sign_deterministic(data, Some(public_key_a.to_bytes()), None)?;
+            private_key_b.sign_deterministic(data, Some(&public_key_a.to_bytes()), None)?;
         private_key_a.verify(data, &signature_b)?;
 
         let ciphertext_a = public_key_a.get_ciphertext(None);
@@ -545,8 +546,10 @@ mod tests {
         );
         let ciphertext_b = public_key_b.get_ciphertext(None);
 
-        let shared_secret_a = private_key_a.get_shared_secret(ciphertext_b.map(|x| x.0));
-        let shared_secret_b = private_key_b.get_shared_secret(ciphertext_a.map(|x| x.0));
+        let shared_secret_a =
+            private_key_a.get_shared_secret(ciphertext_b.as_ref().map(|x| x.0.as_slice()));
+        let shared_secret_b =
+            private_key_b.get_shared_secret(ciphertext_a.as_ref().map(|x| x.0.as_slice()));
         assert_eq!(shared_secret_a, shared_secret_b);
 
         Ok(())

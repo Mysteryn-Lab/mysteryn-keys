@@ -113,7 +113,7 @@ mod bench_verification {
         let key = MlKem512SecretKey::new();
         let key2 = MlKem512SecretKey::new();
         let sig = key
-            .sign_exchange(DATA, Some(key2.public_key().to_bytes()), None)
+            .sign_exchange(DATA, Some(&key2.public_key().to_bytes()), None)
             .unwrap();
         bencher.bench(|| black_box(key2.verify(DATA, &sig)))
     }
@@ -179,7 +179,7 @@ mod bench_verification {
         let key = X25519SecretKey::new();
         let key2 = X25519SecretKey::new();
         let sig = key
-            .sign_exchange(DATA, Some(key2.public_key().to_bytes()), None)
+            .sign_exchange(DATA, Some(&key2.public_key().to_bytes()), None)
             .unwrap();
         bencher.bench(|| black_box(key2.verify(DATA, &sig)))
     }

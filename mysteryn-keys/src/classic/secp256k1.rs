@@ -12,7 +12,7 @@ use mysteryn_core::{
 };
 use rand08::{CryptoRng, RngCore, thread_rng as rng};
 use serde::{Deserialize, Serialize};
-use std::{any::Any, fmt::Display, str::FromStr};
+use std::{any::Any, borrow::Cow, fmt::Display, str::FromStr};
 
 #[derive(Clone)]
 pub struct Secp256k1SecretKey(SigningKey);
@@ -55,11 +55,11 @@ impl SecretKeyTrait for Secp256k1SecretKey {
         Box::new(Secp256k1PublicKey(VerifyingKey::from(&self.0)))
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.to_bytes().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.to_bytes().to_vec().into()
     }
 
-    fn get_shared_secret(&self, _: Option<Vec<u8>>) -> Option<Vec<u8>> {
+    fn get_shared_secret(&self, _: Option<&[u8]>) -> Option<Vec<u8>> {
         None
     }
 
@@ -74,7 +74,7 @@ impl SecretKeyTrait for Secp256k1SecretKey {
     fn sign_exchange(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         _: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         let signature: Signature = self.0.sign(data);
@@ -84,7 +84,7 @@ impl SecretKeyTrait for Secp256k1SecretKey {
     fn sign_deterministic(
         &self,
         data: &[u8],
-        other_public_key_raw_bytes: Option<Vec<u8>>,
+        other_public_key_raw_bytes: Option<&[u8]>,
         attributes: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         self.sign_exchange(data, other_public_key_raw_bytes, attributes)
@@ -225,8 +225,8 @@ impl PublicKeyTrait for Secp256k1PublicKey {
         known_algorithm_name::ES256K
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.to_sec1_bytes().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.to_sec1_bytes().to_vec().into()
     }
 
     fn get_ciphertext(&self, _nonce: Option<&[u8]>) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -305,7 +305,7 @@ impl TryFrom<&KeyAttributes> for Secp256k1PublicKey {
 
 impl PartialOrd for Secp256k1PublicKey {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.to_bytes().cmp(&other.to_bytes()))
+        Some(self.cmp(other))
     }
 }
 
@@ -443,12 +443,12 @@ mod tests {
         let secret_key_str = secret_key.to_string();
         let public_key_str = public_key.to_string();
 
-        let restored_secret_key = Secp256k1SecretKey::try_from(secret_key_bytes.as_slice())?;
+        let restored_secret_key = Secp256k1SecretKey::try_from(secret_key_bytes.as_ref())?;
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
-        let restored_public_key = Secp256k1PublicKey::try_from(public_key_bytes.as_slice())?;
+        let restored_public_key = Secp256k1PublicKey::try_from(public_key_bytes.as_ref())?;
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_secret_key = Secp256k1SecretKey::from_str(&secret_key_str)?;

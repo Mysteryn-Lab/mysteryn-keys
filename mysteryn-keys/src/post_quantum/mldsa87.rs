@@ -16,6 +16,7 @@ use rand08::{CryptoRng, RngCore, thread_rng as rng};
 use serde::{Deserialize, Serialize};
 use std::{
     any::Any,
+    borrow::Cow,
     fmt::{Debug, Display},
     str::FromStr,
 };
@@ -62,11 +63,11 @@ impl SecretKeyTrait for MlDsa87SecretKey {
         Box::new(MlDsa87PublicKey(self.0.get_public_key()))
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.clone().into_bytes().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.clone().into_bytes().to_vec().into()
     }
 
-    fn get_shared_secret(&self, _: Option<Vec<u8>>) -> Option<Vec<u8>> {
+    fn get_shared_secret(&self, _: Option<&[u8]>) -> Option<Vec<u8>> {
         None
     }
 
@@ -81,7 +82,7 @@ impl SecretKeyTrait for MlDsa87SecretKey {
     fn sign_exchange(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         _: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         let signature = self
@@ -94,7 +95,7 @@ impl SecretKeyTrait for MlDsa87SecretKey {
     fn sign_deterministic(
         &self,
         data: &[u8],
-        other_public_key_raw_bytes: Option<Vec<u8>>,
+        other_public_key_raw_bytes: Option<&[u8]>,
         attributes: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         self.sign_exchange(data, other_public_key_raw_bytes, attributes)
@@ -168,7 +169,7 @@ impl TryFrom<&KeyAttributes> for MlDsa87SecretKey {
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
             let mut buf: [u8; 4896] = [0; 4896];
-            let mut r = key_data.as_slice();
+            let mut r = key_data;
             std::io::copy(&mut r, &mut buf.as_mut_slice())
                 .map_err(|e| Error::InvalidKey(e.to_string()))?;
             let secret_key =
@@ -200,8 +201,8 @@ impl PublicKeyTrait for MlDsa87PublicKey {
         known_algorithm_name::MLDSA87
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.clone().into_bytes().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.clone().into_bytes().to_vec().into()
     }
 
     fn get_ciphertext(&self, _nonce: Option<&[u8]>) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -287,7 +288,7 @@ impl TryFrom<&KeyAttributes> for MlDsa87PublicKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            Self::try_from(key_data.as_slice())
+            Self::try_from(key_data)
         } else {
             Err(Error::InvalidKey("invalid attributes".to_owned()))
         }
@@ -374,12 +375,12 @@ mod tests {
         let secret_key_str = secret_key.to_string();
         let public_key_str = public_key.to_string();
 
-        let restored_secret_key = MlDsa87SecretKey::try_from(secret_key_bytes.as_slice())?;
+        let restored_secret_key = MlDsa87SecretKey::try_from(secret_key_bytes.as_ref())?;
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
-        let restored_public_key = MlDsa87PublicKey::try_from(public_key_bytes.as_slice())?;
+        let restored_public_key = MlDsa87PublicKey::try_from(public_key_bytes.as_ref())?;
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_secret_key = MlDsa87SecretKey::from_str(&secret_key_str)?;

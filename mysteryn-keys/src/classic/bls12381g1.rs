@@ -10,7 +10,7 @@ use mysteryn_core::{
 };
 use rand08::{CryptoRng, RngCore, thread_rng as rng};
 use serde::{Deserialize, Serialize};
-use std::{any::Any, fmt::Display, str::FromStr};
+use std::{any::Any, borrow::Cow, fmt::Display, str::FromStr};
 
 #[derive(Clone)]
 pub struct Bls12381G1SecretKey(SigningKey);
@@ -53,11 +53,11 @@ impl SecretKeyTrait for Bls12381G1SecretKey {
         Box::new(Bls12381G1PublicKey(VerifyingKey::from(&self.0)))
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.to_bytes().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.to_bytes().to_vec().into()
     }
 
-    fn get_shared_secret(&self, _: Option<Vec<u8>>) -> Option<Vec<u8>> {
+    fn get_shared_secret(&self, _: Option<&[u8]>) -> Option<Vec<u8>> {
         None
     }
 
@@ -72,7 +72,7 @@ impl SecretKeyTrait for Bls12381G1SecretKey {
     fn sign_exchange(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         attributes: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         let signature = self.0.sign(data);
@@ -85,7 +85,7 @@ impl SecretKeyTrait for Bls12381G1SecretKey {
     fn sign_deterministic(
         &self,
         data: &[u8],
-        other_public_key_raw_bytes: Option<Vec<u8>>,
+        other_public_key_raw_bytes: Option<&[u8]>,
         attributes: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         self.sign_exchange(data, other_public_key_raw_bytes, attributes)
@@ -133,10 +133,10 @@ impl std::fmt::Debug for Bls12381G1SecretKey {
 impl TryFrom<&[u8]> for Bls12381G1SecretKey {
     type Error = Error;
     fn try_from(bytes: &[u8]) -> Result<Self> {
-        let b = bytes.to_vec();
-        Ok(Self(SigningKey::from_reader(&mut b.as_slice()).map_err(
-            |_| Error::InvalidKey("invalid bytes".to_string()),
-        )?))
+        let mut b = bytes;
+        Ok(Self(SigningKey::from_reader(&mut b).map_err(|_| {
+            Error::InvalidKey("invalid bytes".to_string())
+        })?))
     }
 }
 
@@ -154,7 +154,7 @@ impl TryFrom<&KeyAttributes> for Bls12381G1SecretKey {
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
             let mut b: [u8; 32] = [0; 32];
-            let mut r = key_data.as_slice();
+            let mut r = key_data;
             std::io::copy(&mut r, &mut b.as_mut_slice())
                 .map_err(|e| Error::EncodingError(e.to_string()))?;
             let secret_key = SigningKey::from_bytes(&b)
@@ -234,8 +234,8 @@ impl PublicKeyTrait for Bls12381G1PublicKey {
         known_algorithm_name::Bls12381G1
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.to_bytes().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.to_bytes().to_vec().into()
     }
 
     fn get_ciphertext(&self, _nonce: Option<&[u8]>) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -299,7 +299,7 @@ impl TryFrom<&KeyAttributes> for Bls12381G1PublicKey {
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
             let mut b: [u8; 96] = [0; 96];
-            let mut r = key_data.as_slice();
+            let mut r = key_data;
             std::io::copy(&mut r, &mut b.as_mut_slice())
                 .map_err(|e| Error::EncodingError(e.to_string()))?;
             let public_key = VerifyingKey::from_bytes(&b)
@@ -455,13 +455,13 @@ mod tests {
         let public_key_str = public_key.to_string();
 
         let restored_secret_key =
-            Bls12381G1SecretKey::try_from(secret_key_bytes.as_slice()).expect("cannot deserialize");
+            Bls12381G1SecretKey::try_from(secret_key_bytes.as_ref()).expect("cannot deserialize");
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_public_key =
-            Bls12381G1PublicKey::try_from(public_key_bytes.as_slice()).expect("cannot deserialize");
+            Bls12381G1PublicKey::try_from(public_key_bytes.as_ref()).expect("cannot deserialize");
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_secret_key =

@@ -15,7 +15,7 @@ use rsa::{
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Sha256, Sha512};
-use std::{any::Any, fmt::Display, str::FromStr};
+use std::{any::Any, borrow::Cow, fmt::Display, str::FromStr};
 
 pub const MIN_RSA_BITS: usize = 2048;
 pub const DEFAULT_RSA_256_BITS: usize = 3072;
@@ -68,16 +68,17 @@ impl SecretKeyTrait for Rs256SecretKey {
         Box::new(Rs256PublicKey(self.0.to_public_key()))
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
         // TODO unsafe!
         self.0
             .to_pkcs8_der()
             .expect("RSA failed")
             .as_bytes()
             .to_vec()
+            .into()
     }
 
-    fn get_shared_secret(&self, _: Option<Vec<u8>>) -> Option<Vec<u8>> {
+    fn get_shared_secret(&self, _: Option<&[u8]>) -> Option<Vec<u8>> {
         None
     }
 
@@ -92,7 +93,7 @@ impl SecretKeyTrait for Rs256SecretKey {
     fn sign_exchange(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         attributes: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         let signing_key = SigningKey::<Sha256>::new(self.0.clone());
@@ -109,7 +110,7 @@ impl SecretKeyTrait for Rs256SecretKey {
     fn sign_deterministic(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         attributes: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         let signing_key = SigningKey::<Sha256>::new(self.0.clone());
@@ -257,13 +258,14 @@ impl PublicKeyTrait for Rs256PublicKey {
         known_algorithm_name::RS256
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
         // TODO unsafe!
         self.0
             .to_public_key_der()
             .expect("RSA failed")
             .as_bytes()
             .to_vec()
+            .into()
     }
 
     fn get_ciphertext(&self, _nonce: Option<&[u8]>) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -496,16 +498,17 @@ impl SecretKeyTrait for Rs512SecretKey {
         Box::new(Rs512PublicKey(self.0.to_public_key()))
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
         // TODO unsafe!
         self.0
             .to_pkcs8_der()
             .expect("RSA failed")
             .as_bytes()
             .to_vec()
+            .into()
     }
 
-    fn get_shared_secret(&self, _: Option<Vec<u8>>) -> Option<Vec<u8>> {
+    fn get_shared_secret(&self, _: Option<&[u8]>) -> Option<Vec<u8>> {
         None
     }
 
@@ -520,7 +523,7 @@ impl SecretKeyTrait for Rs512SecretKey {
     fn sign_exchange(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         attributes: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         let signing_key = SigningKey::<Sha512>::new(self.0.clone());
@@ -535,7 +538,7 @@ impl SecretKeyTrait for Rs512SecretKey {
     fn sign_deterministic(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         attributes: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         let signing_key = SigningKey::<Sha512>::new(self.0.clone());
@@ -681,13 +684,14 @@ impl PublicKeyTrait for Rs512PublicKey {
         known_algorithm_name::RS512
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
         // TODO unsafe!
         self.0
             .to_public_key_der()
             .expect("RSA failed")
             .as_bytes()
             .to_vec()
+            .into()
     }
 
     fn get_ciphertext(&self, _nonce: Option<&[u8]>) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -907,13 +911,13 @@ mod tests {
         let public_key_str = public_key.to_string();
 
         let restored_secret_key =
-            Rs256SecretKey::try_from(secret_key_bytes.as_slice()).expect("cannot read key");
+            Rs256SecretKey::try_from(secret_key_bytes.as_ref()).expect("cannot read key");
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_public_key =
-            Rs256PublicKey::try_from(public_key_bytes.as_slice()).expect("cannot read key");
+            Rs256PublicKey::try_from(public_key_bytes.as_ref()).expect("cannot read key");
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_secret_key =
@@ -947,12 +951,12 @@ mod tests {
         let secret_key_str = secret_key.to_string();
         let public_key_str = public_key.to_string();
 
-        let restored_secret_key = Rs512SecretKey::try_from(secret_key_bytes.as_slice())?;
+        let restored_secret_key = Rs512SecretKey::try_from(secret_key_bytes.as_ref())?;
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
-        let restored_public_key = Rs512PublicKey::try_from(public_key_bytes.as_slice())?;
+        let restored_public_key = Rs512PublicKey::try_from(public_key_bytes.as_ref())?;
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_secret_key = Rs512SecretKey::from_str(&secret_key_str)?;
@@ -987,13 +991,13 @@ mod tests {
         let public_key_str = public_key.to_string();
 
         let restored_secret_key =
-            Rs512SecretKey::try_from(secret_key_bytes.as_slice()).expect("from bytes failed");
+            Rs512SecretKey::try_from(secret_key_bytes.as_ref()).expect("from bytes failed");
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_public_key =
-            Rs512PublicKey::try_from(public_key_bytes.as_slice()).expect("from bytes failed");
+            Rs512PublicKey::try_from(public_key_bytes.as_ref()).expect("from bytes failed");
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_secret_key =

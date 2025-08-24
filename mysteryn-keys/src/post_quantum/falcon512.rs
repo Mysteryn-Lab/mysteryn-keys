@@ -9,7 +9,7 @@ use mysteryn_core::{
 };
 use rand::{CryptoRng, Rng, RngCore, rng};
 use serde::{Deserialize, Serialize};
-use std::{any::Any, fmt::Display, str::FromStr};
+use std::{any::Any, borrow::Cow, fmt::Display, str::FromStr};
 
 #[derive(Clone)]
 pub struct Falcon512SecretKey(SigningKey);
@@ -52,11 +52,11 @@ impl SecretKeyTrait for Falcon512SecretKey {
         Box::new(Falcon512PublicKey(VerifyingKey::from_secret_key(&self.0)))
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.to_bytes()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.to_bytes().into()
     }
 
-    fn get_shared_secret(&self, _: Option<Vec<u8>>) -> Option<Vec<u8>> {
+    fn get_shared_secret(&self, _: Option<&[u8]>) -> Option<Vec<u8>> {
         None
     }
 
@@ -71,7 +71,7 @@ impl SecretKeyTrait for Falcon512SecretKey {
     fn sign_exchange(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         _: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         let signature: Signature = falcon512::sign(data, &self.0);
@@ -81,7 +81,7 @@ impl SecretKeyTrait for Falcon512SecretKey {
     fn sign_deterministic(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         _: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         // TODO: Implement deterministic signatures
@@ -148,7 +148,7 @@ impl TryFrom<&KeyAttributes> for Falcon512SecretKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            let secret_key = SigningKey::from_bytes(key_data.as_slice())
+            let secret_key = SigningKey::from_bytes(key_data)
                 .map_err(|_| Error::InvalidKey("malformed key bytes".to_string()))?;
             Ok(Self(secret_key))
         } else {
@@ -225,8 +225,8 @@ impl PublicKeyTrait for Falcon512PublicKey {
         known_algorithm_name::Falcon512
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.to_bytes()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.to_bytes().into()
     }
 
     fn get_ciphertext(&self, _nonce: Option<&[u8]>) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -259,7 +259,7 @@ impl PublicKeyTrait for Falcon512PublicKey {
 
 impl PartialEq for Falcon512PublicKey {
     fn eq(&self, other: &Self) -> bool {
-        self.0.to_bytes() == other.0.to_bytes()
+        self.0 == other.0
     }
 }
 
@@ -267,7 +267,7 @@ impl Eq for Falcon512PublicKey {}
 
 impl PartialOrd for Falcon512PublicKey {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.0.to_bytes().cmp(&other.0.to_bytes()))
+        Some(self.cmp(other))
     }
 }
 
@@ -364,7 +364,7 @@ impl TryFrom<&KeyAttributes> for Falcon512PublicKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            let public_key = VerifyingKey::from_bytes(key_data.as_slice())
+            let public_key = VerifyingKey::from_bytes(key_data)
                 .map_err(|_| Error::InvalidKey("malformed key bytes".to_string()))?;
             Ok(Self(public_key))
         } else {
@@ -453,12 +453,12 @@ mod tests {
         let secret_key_str = secret_key.to_string();
         let public_key_str = public_key.to_string();
 
-        let restored_secret_key = Falcon512SecretKey::try_from(secret_key_bytes.as_slice())?;
+        let restored_secret_key = Falcon512SecretKey::try_from(secret_key_bytes.as_ref())?;
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
-        let restored_public_key = Falcon512PublicKey::try_from(public_key_bytes.as_slice())?;
+        let restored_public_key = Falcon512PublicKey::try_from(public_key_bytes.as_ref())?;
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_secret_key = Falcon512SecretKey::from_str(&secret_key_str)?;

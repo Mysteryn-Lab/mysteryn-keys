@@ -17,6 +17,7 @@ use rand08::{CryptoRng, RngCore, thread_rng as rng};
 use serde::{Deserialize, Serialize};
 use std::{
     any::Any,
+    borrow::Cow,
     fmt::{Debug, Display},
     str::FromStr,
 };
@@ -63,11 +64,11 @@ impl SecretKeyTrait for P384SecretKey {
         Box::new(P384PublicKey(VerifyingKey::from(&self.0)))
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.to_bytes().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.to_bytes().to_vec().into()
     }
 
-    fn get_shared_secret(&self, _: Option<Vec<u8>>) -> Option<Vec<u8>> {
+    fn get_shared_secret(&self, _: Option<&[u8]>) -> Option<Vec<u8>> {
         None
     }
 
@@ -82,20 +83,20 @@ impl SecretKeyTrait for P384SecretKey {
     fn sign_exchange(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         _: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         let signature: ecdsa::Signature = self
             .0
             .try_sign(data)
             .map_err(|e| Error::IOError(e.to_string()))?;
-        Ok(RawSignature::from(signature.to_vec().as_slice()))
+        Ok(RawSignature::from(signature.to_bytes().as_slice()))
     }
 
     fn sign_deterministic(
         &self,
         data: &[u8],
-        other_public_key_raw_bytes: Option<Vec<u8>>,
+        other_public_key_raw_bytes: Option<&[u8]>,
         attributes: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         self.sign_exchange(data, other_public_key_raw_bytes, attributes)
@@ -158,8 +159,8 @@ impl TryFrom<&KeyAttributes> for P384SecretKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            let secret_key = SigningKey::try_from(key_data.as_slice())
-                .map_err(|e| Error::InvalidKey(e.to_string()))?;
+            let secret_key =
+                SigningKey::try_from(key_data).map_err(|e| Error::InvalidKey(e.to_string()))?;
             Ok(Self(secret_key))
         } else {
             Err(Error::InvalidKey("invalid attributes".to_owned()))
@@ -236,8 +237,8 @@ impl PublicKeyTrait for P384PublicKey {
         known_algorithm_name::ES512
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.to_encoded_point(true).to_bytes().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.to_encoded_point(true).to_bytes().to_vec().into()
     }
 
     fn get_ciphertext(&self, _nonce: Option<&[u8]>) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -307,8 +308,8 @@ impl TryFrom<&KeyAttributes> for P384PublicKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            let public_key = VerifyingKey::try_from(key_data.as_slice())
-                .map_err(|e| Error::InvalidKey(e.to_string()))?;
+            let public_key =
+                VerifyingKey::try_from(key_data).map_err(|e| Error::InvalidKey(e.to_string()))?;
             Ok(Self(public_key))
         } else {
             Err(Error::InvalidKey("invalid attributes".to_owned()))
@@ -464,12 +465,12 @@ mod tests {
         let secret_key_str = secret_key.to_string();
         let public_key_str = public_key.to_string();
 
-        let restored_secret_key = P384SecretKey::try_from(secret_key_bytes.as_slice())?;
+        let restored_secret_key = P384SecretKey::try_from(secret_key_bytes.as_ref())?;
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
-        let restored_public_key = P384PublicKey::try_from(public_key_bytes.as_slice())?;
+        let restored_public_key = P384PublicKey::try_from(public_key_bytes.as_ref())?;
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_secret_key = P384SecretKey::from_str(&secret_key_str)?;

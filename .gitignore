@@ -1,8 +1,9 @@
 **/target/
 *.ffs_db
-
 **/.DS_Store
+
 .vscode
+.continue
 
 dist
 pkg

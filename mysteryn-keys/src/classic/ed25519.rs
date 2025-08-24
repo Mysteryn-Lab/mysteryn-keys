@@ -9,7 +9,7 @@ use mysteryn_core::{
 };
 use rand08::{CryptoRng, RngCore, thread_rng as rng};
 use serde::{Deserialize, Serialize};
-use std::{any::Any, fmt::Display, str::FromStr};
+use std::{any::Any, borrow::Cow, fmt::Display, str::FromStr};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Ed25519SecretKey(SigningKey);
@@ -52,11 +52,11 @@ impl SecretKeyTrait for Ed25519SecretKey {
         Box::new(Ed25519PublicKey(VerifyingKey::from(&self.0)))
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.as_ref().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.as_ref().into()
     }
 
-    fn get_shared_secret(&self, _: Option<Vec<u8>>) -> Option<Vec<u8>> {
+    fn get_shared_secret(&self, _: Option<&[u8]>) -> Option<Vec<u8>> {
         None
     }
 
@@ -71,7 +71,7 @@ impl SecretKeyTrait for Ed25519SecretKey {
     fn sign_exchange(
         &self,
         data: &[u8],
-        _: Option<Vec<u8>>,
+        _: Option<&[u8]>,
         _: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         let signature = self.0.sign(data);
@@ -82,7 +82,7 @@ impl SecretKeyTrait for Ed25519SecretKey {
     fn sign_deterministic(
         &self,
         data: &[u8],
-        other_public_key_raw_bytes: Option<Vec<u8>>,
+        other_public_key_raw_bytes: Option<&[u8]>,
         attributes: Option<&mut SignatureAttributes>,
     ) -> Result<RawSignature> {
         self.sign_exchange(data, other_public_key_raw_bytes, attributes)
@@ -145,8 +145,8 @@ impl TryFrom<&KeyAttributes> for Ed25519SecretKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            let secret_key = SigningKey::try_from(key_data.as_slice())
-                .map_err(|e| Error::InvalidKey(e.to_string()))?;
+            let secret_key =
+                SigningKey::try_from(key_data).map_err(|e| Error::InvalidKey(e.to_string()))?;
             Ok(Self(secret_key))
         } else {
             Err(Error::InvalidKey("invalid attributes".to_owned()))
@@ -174,8 +174,8 @@ impl PublicKeyTrait for Ed25519PublicKey {
         known_algorithm_name::EdDSA
     }
 
-    fn to_bytes(&self) -> Vec<u8> {
-        self.0.as_ref().to_vec()
+    fn to_bytes(&'_ self) -> Cow<'_, [u8]> {
+        self.0.as_ref().into()
     }
 
     fn get_ciphertext(&self, _nonce: Option<&[u8]>) -> Option<(Vec<u8>, Vec<u8>)> {
@@ -206,7 +206,7 @@ impl PublicKeyTrait for Ed25519PublicKey {
 
 impl PartialEq for Ed25519PublicKey {
     fn eq(&self, other: &Self) -> bool {
-        self.0.as_ref().to_vec() == other.0.as_ref().to_vec()
+        self.0.as_ref() == other.0.as_ref()
     }
 }
 
@@ -214,7 +214,7 @@ impl Eq for Ed25519PublicKey {}
 
 impl PartialOrd for Ed25519PublicKey {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.0.as_ref().cmp(other.0.as_ref()))
+        Some(self.cmp(other))
     }
 }
 
@@ -263,8 +263,8 @@ impl TryFrom<&KeyAttributes> for Ed25519PublicKey {
     type Error = Error;
     fn try_from(attributes: &KeyAttributes) -> Result<Self> {
         if let Some(key_data) = attributes.get_key_data() {
-            let public_key = VerifyingKey::try_from(key_data.as_slice())
-                .map_err(|e| Error::InvalidKey(e.to_string()))?;
+            let public_key =
+                VerifyingKey::try_from(key_data).map_err(|e| Error::InvalidKey(e.to_string()))?;
             Ok(Self(public_key))
         } else {
             Err(Error::InvalidKey("invalid attributes".to_owned()))
@@ -352,12 +352,12 @@ mod tests {
         let secret_key_str = secret_key.to_string();
         let public_key_str = public_key.to_string();
 
-        let restored_secret_key = Ed25519SecretKey::try_from(secret_key_bytes.as_slice())?;
+        let restored_secret_key = Ed25519SecretKey::try_from(secret_key_bytes.as_ref())?;
         assert_eq!(restored_secret_key.to_bytes(), secret_key_bytes);
         let restored_public_key = restored_secret_key.public_key();
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
-        let restored_public_key = Ed25519PublicKey::try_from(public_key_bytes.as_slice())?;
+        let restored_public_key = Ed25519PublicKey::try_from(public_key_bytes.as_ref())?;
         assert_eq!(restored_public_key.to_bytes(), public_key_bytes);
 
         let restored_secret_key = Ed25519SecretKey::from_str(&secret_key_str)?;

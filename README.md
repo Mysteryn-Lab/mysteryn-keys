@@ -2,7 +2,7 @@
 
 This crate provides a collection of digital signature keys.
 
-See the [`mysteryn-crypto` Readme](https://github.com/Mysteryn-Lab/mysteryn-crypto/blob/master/README.md) for the full description.
+See the [`mysteryn-crypto` Readme](https://github.com/Mysteryn-Lab/mysteryn-crypto/blob/master//mysteryn-crypto/README.md) for the full description.
 
 ## Workspace members
 

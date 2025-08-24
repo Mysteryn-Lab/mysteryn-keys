@@ -82,7 +82,7 @@ mod bench_signing {
     fn MlKem512(bencher: Bencher) {
         let key = MlKem512SecretKey::new();
         let public2 = MlKem512SecretKey::new().public_key();
-        bencher.bench(|| black_box(key.sign_exchange(DATA, Some(public2.to_bytes()), None)))
+        bencher.bench(|| black_box(key.sign_exchange(DATA, Some(&public2.to_bytes()), None)))
     }
 
     #[bench]
@@ -131,7 +131,7 @@ mod bench_signing {
     fn X25519(bencher: Bencher) {
         let key = X25519SecretKey::new();
         let public2 = X25519SecretKey::new().public_key();
-        bencher.bench(|| black_box(key.sign_exchange(DATA, Some(public2.to_bytes()), None)))
+        bencher.bench(|| black_box(key.sign_exchange(DATA, Some(&public2.to_bytes()), None)))
     }
 }
 
