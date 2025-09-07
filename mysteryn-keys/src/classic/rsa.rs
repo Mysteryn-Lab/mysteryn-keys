@@ -140,6 +140,10 @@ impl SecretKeyTrait for Rs256SecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
+    }
 }
 
 impl Display for Rs256SecretKey {
@@ -291,6 +295,10 @@ impl PublicKeyTrait for Rs256PublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
     }
 }
 
@@ -566,6 +574,10 @@ impl SecretKeyTrait for Rs512SecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
+    }
 }
 
 impl Display for Rs512SecretKey {
@@ -717,6 +729,10 @@ impl PublicKeyTrait for Rs512PublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
     }
 }
 

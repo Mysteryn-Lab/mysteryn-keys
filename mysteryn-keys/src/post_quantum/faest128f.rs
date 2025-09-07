@@ -115,6 +115,10 @@ impl SecretKeyTrait for Faest128fSecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
+    }
 }
 
 impl Display for Faest128fSecretKey {
@@ -260,6 +264,10 @@ impl PublicKeyTrait for Faest128fPublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
     }
 }
 

@@ -13,7 +13,6 @@ rustflags = ["--cfg", "wasmtime", "--cfg", "tokio_unstable"]
 
 [profile.release]
 strip = "symbols"
-opt-level = "z"
-lto = "fat"
-codegen-units = 1
-panic = "abort"
+
+[alias]
+b = "bench --all-features -- --test --test-threads=1 -q bench"

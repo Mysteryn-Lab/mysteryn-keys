@@ -1,7 +1,7 @@
 [package]
 name = "mysteryn-keys"
 description = "The Mysteryn keys collection"
-version = "0.2.0"
+version = "0.2.1"
 edition = { workspace = true }
 rust-version = { workspace = true }
 keywords = ["crypto", "signature", "authorization"]
@@ -9,7 +9,7 @@ categories = ["cryptography", "algorithms", "encoding"]
 authors = ["Dmytro Savranskyi <ingvuil@gmail.com>"]
 homepage = "https://mysteryn.com"
 repository = "https://github.com/Mysteryn-Lab/mysteryn-keys"
-license = "MIT"
+license = "Ethical Use License v1.0"
 readme = "README.md"
 
 # Starting from Rust 1.87 all wasm features are on, so need to specify 
@@ -20,17 +20,17 @@ wasm-opt = ["-Oz", "--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
 [features]
 default = ["ed25519", "secp256k1", "p521", "falcon", "hmac"]
 
-ed25519 = ["dep:ed25519-zebra"]
+ed25519 = ["dep:ed25519-zebra", "dep:ssh-key"]
 secp256k1 = ["dep:k256"]
-p521 = ["dep:p521"]
+p521 = ["dep:p521", "dep:ssh-key"]
 falcon = ["dep:falcon-rust"]
 hmac = ["dep:hmac", "dep:sha2"]
 
 ed448 = ["dep:ed448-rust"]
 bls12381 = ["dep:bls12_381-bls", "dep:dusk-bytes"]
 x25519 = ["dep:ed25519-zebra", "x25519-dalek"]
-p256 = ["dep:p256"]
-p384 = ["dep:p384"]
+p256 = ["dep:p256", "dep:ssh-key"]
+p384 = ["dep:p384", "dep:ssh-key"]
 rsa = ["dep:rsa"]
 faest = ["dep:faest"]
 mldsa = ["dep:fips204"]
@@ -65,6 +65,7 @@ ml-kem = { version = "0.3.0-pre", git = "https://github.com/druide/KEMs.git", fe
 slh-dsa = { version = "0.2.0-pre", git = "https://github.com/druide/signatures.git", optional = true }
 hmac = { version = "0.12.1", optional = true }
 sha2 = { version = "0.10", features = ["oid"], optional = true }
+ssh-key = { version = "0.6.7", optional = true, features = ["ed25519", "p521", "p384", "p256", "ecdsa"] }
 
 [target.'cfg(all(target_family = "wasm", target_os = "unknown"))'.dependencies]
 # This is needed so that rand can be included in wasm32-unknown-unknown builds.
@@ -79,7 +80,7 @@ serde-wasm-bindgen = "0.6"
 [dev-dependencies]
 serde_ipld_dagcbor = "0.6"
 serde_json = "1.0"
-divan = "0.1"
+bench-rs = { version = "0.2", git = "https://github.com/druide/bench-rs.git" }
 
 [target.'cfg(not(all(target_family = "wasm", target_os = "unknown")))'.dev-dependencies]
 tokio = { version = "^1", features = ["macros", "test-util"] }
@@ -93,8 +94,6 @@ doctest = false
 
 [[bench]]
 name = "signing"
-harness = false
 
 [[bench]]
 name = "verification"
-harness = false

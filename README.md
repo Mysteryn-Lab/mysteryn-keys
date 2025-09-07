@@ -2,7 +2,7 @@
 
 This crate provides a collection of digital signature keys.
 
-See the [`mysteryn-crypto` Readme](https://github.com/Mysteryn-Lab/mysteryn-crypto/blob/master//mysteryn-crypto/README.md) for the full description.
+See the [`mysteryn-crypto` Readme](https://github.com/Mysteryn-Lab/mysteryn-crypto/blob/master/mysteryn-crypto/README.md) for the full description.
 
 ## Workspace members
 
@@ -10,4 +10,4 @@ See the [`mysteryn-crypto` Readme](https://github.com/Mysteryn-Lab/mysteryn-cryp
 
 ## License
 
-This software is licensed under the [MIT license](./LICENSE).
+Licensed under the [Ethical Use License v1.0](./LICENSE.md).

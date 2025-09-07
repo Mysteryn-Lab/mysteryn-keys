@@ -104,6 +104,10 @@ impl SecretKeyTrait for HmacSha256SecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
+    }
 }
 
 impl Display for HmacSha256SecretKey {
@@ -200,6 +204,10 @@ impl PublicKeyTrait for HmacSha256PublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
     }
 }
 

@@ -104,6 +104,23 @@ impl SecretKeyTrait for Ed25519SecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        let pk = VerifyingKey::from(&self.0);
+        let ssh_public_key = ssh_key::public::Ed25519PublicKey(pk.into());
+        let ssh_keypair = ssh_key::private::Ed25519Keypair {
+            public: ssh_public_key,
+            private: self.0.as_ref().try_into().map_err(|_| {
+                Error::InvalidKey("failed to convert secret key to bytes".to_string())
+            })?,
+        };
+
+        let keypair = ssh_key::PrivateKey::from(ssh_keypair);
+        keypair
+            .to_openssh(ssh_key::LineEnding::LF)
+            .map(|s| s.to_string())
+            .map_err(|e| Error::EncodingError(e.to_string()))
+    }
 }
 
 impl Display for Ed25519SecretKey {
@@ -201,6 +218,13 @@ impl PublicKeyTrait for Ed25519PublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        let ssh_pk = ssh_key::PublicKey::from(ssh_key::public::Ed25519PublicKey(self.0.into()));
+        ssh_pk
+            .to_openssh()
+            .map_err(|e| Error::EncodingError(e.to_string()))
     }
 }
 

@@ -107,6 +107,10 @@ impl SecretKeyTrait for SlhDsaShake128fSecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
+    }
 }
 
 impl Display for SlhDsaShake128fSecretKey {
@@ -252,6 +256,10 @@ impl PublicKeyTrait for SlhDsaShake128fPublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
     }
 }
 

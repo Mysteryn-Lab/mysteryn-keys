@@ -122,6 +122,10 @@ impl SecretKeyTrait for MlDsa44SecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
+    }
 }
 
 impl Display for MlDsa44SecretKey {
@@ -233,6 +237,10 @@ impl PublicKeyTrait for MlDsa44PublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
     }
 }
 

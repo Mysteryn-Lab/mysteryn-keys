@@ -118,6 +118,26 @@ impl SecretKeyTrait for P384SecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        let verifying_key = VerifyingKey::from(&self.0);
+
+        let secret_key = p384::SecretKey::from_slice(&self.0.to_bytes())
+            .map_err(|e| Error::InvalidKey(e.to_string()))?;
+
+        let ssh_keypair = ssh_key::private::EcdsaKeypair::NistP384 {
+            public: verifying_key.to_encoded_point(true),
+            private: ssh_key::private::EcdsaPrivateKey::from(secret_key),
+        };
+
+        let keypair =
+            ssh_key::PrivateKey::new(ssh_key::private::KeypairData::Ecdsa(ssh_keypair), "")
+                .map_err(|e| Error::EncodingError(e.to_string()))?;
+        keypair
+            .to_openssh(ssh_key::LineEnding::LF)
+            .map(|s| s.to_string())
+            .map_err(|e| Error::EncodingError(e.to_string()))
+    }
 }
 
 impl Display for P384SecretKey {
@@ -264,6 +284,16 @@ impl PublicKeyTrait for P384PublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        let public_key_bytes = self.0.to_encoded_point(false);
+        let ssh_pk = ssh_key::public::EcdsaPublicKey::from_sec1_bytes(public_key_bytes.as_bytes())
+            .map_err(|e| Error::InvalidKey(e.to_string()))?;
+        let ssh_pk = ssh_key::PublicKey::from(ssh_pk);
+        ssh_pk
+            .to_openssh()
+            .map_err(|e| Error::EncodingError(e.to_string()))
     }
 }
 

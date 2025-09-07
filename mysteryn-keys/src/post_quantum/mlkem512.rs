@@ -185,6 +185,10 @@ impl SecretKeyTrait for MlKem512SecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
+    }
 }
 
 impl Display for MlKem512SecretKey {
@@ -348,6 +352,10 @@ impl PublicKeyTrait for MlKem512PublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
     }
 }
 

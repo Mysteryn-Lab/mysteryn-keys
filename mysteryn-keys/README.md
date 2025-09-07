@@ -42,9 +42,15 @@ set NO_HEADLESS=1 && cargo test --all-features --target wasm32-unknown-unknown -
 ## Benchmarks
 
 ```bash
-cargo bench --all-features
+cargo bench --all-features -- --test --test-threads=1 -q bench
+```
+
+or
+
+```bash
+cargo b
 ```
 
 ## License
 
-This software is licensed under the [MIT license](./LICENSE).
+Licensed under the [Ethical Use License v1.0](./LICENSE.md).

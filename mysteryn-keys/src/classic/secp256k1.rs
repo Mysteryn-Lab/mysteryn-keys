@@ -107,6 +107,15 @@ impl SecretKeyTrait for Secp256k1SecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        let secret_key = k256::SecretKey::from_slice(&self.0.to_bytes())
+            .map_err(|e| Error::InvalidKey(e.to_string()))?;
+        secret_key
+            .to_sec1_pem(ssh_key::LineEnding::LF)
+            .map(|s| s.to_string())
+            .map_err(|e| Error::EncodingError(e.to_string()))
+    }
 }
 
 impl Display for Secp256k1SecretKey {
@@ -252,6 +261,16 @@ impl PublicKeyTrait for Secp256k1PublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        let ssh_pk =
+            ssh_key::public::EcdsaPublicKey::from_sec1_bytes(self.0.to_sec1_bytes().as_ref())
+                .map_err(|e| Error::InvalidKey(e.to_string()))?;
+        let ssh_pk = ssh_key::PublicKey::from(ssh_pk);
+        ssh_pk
+            .to_openssh()
+            .map_err(|e| Error::EncodingError(e.to_string()))
     }
 }
 

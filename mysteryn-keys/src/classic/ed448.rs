@@ -103,6 +103,10 @@ impl SecretKeyTrait for Ed448SecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
+    }
 }
 
 impl Display for Ed448SecretKey {
@@ -245,6 +249,10 @@ impl PublicKeyTrait for Ed448PublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
     }
 }
 

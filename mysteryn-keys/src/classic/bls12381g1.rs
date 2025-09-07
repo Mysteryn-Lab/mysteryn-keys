@@ -111,6 +111,10 @@ impl SecretKeyTrait for Bls12381G1SecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
+    }
 }
 
 impl Display for Bls12381G1SecretKey {
@@ -265,6 +269,10 @@ impl PublicKeyTrait for Bls12381G1PublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
     }
 }
 

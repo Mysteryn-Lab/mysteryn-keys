@@ -109,6 +109,10 @@ impl SecretKeyTrait for Falcon1024SecretKey {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
+    }
 }
 
 impl Display for Falcon1024SecretKey {
@@ -256,6 +260,10 @@ impl PublicKeyTrait for Falcon1024PublicKey {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn to_ssh_key(&self) -> Result<String> {
+        Err(Error::NotImplemented)
     }
 }
 
